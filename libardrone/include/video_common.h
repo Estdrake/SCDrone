@@ -115,7 +115,7 @@ struct VideoPacket
 
 class ARStream {
 private:
-	bool						isFirstFrame;
+	bool						isFirstFrame; // 
 	unsigned int				firstFrameTimeStamp;
 	unsigned int				lastFrameTimeStamp;
 
