@@ -27,7 +27,7 @@ Le drone fournit par l'école est un AR Drone 2.0 qui vient avec un SDK fournit 
 Mais pour des raisons de plaisirs et compatibilité nous avons décider de réecrire le SDK en c++ moderne.
 Pour ce faire nous avons comme références :
 
-* [SDK Parrot]("http://developer.parrot.com/docs/SDK2/ARDrone_SDK_2_0_1.zip") :  lien pour télécharger le code source
+* [SDK Parrot]("http://developer.parrot.com/docs/SDK2") :  lien pour télécharger le code source
 * [Documentation SDK Parrot](https://drive.google.com/open?id=13GH4rXcP_LP_JtIrr1bc2artrZ25EUrx) : documentation du drone
 * [Port du SDK en C# et C++/cli](https://github.com/ARDrone2Windows/SDK) : le github d'un projet en C# qui a réimplémenter le sdk 
 
@@ -42,7 +42,7 @@ Les technologies suivantes sont utilisé par au moins une composante :
     * Log    : pour gérer nos niveau de log et wrapper des informations supplémenatire pour faciliter le débuggage
     * Test   : pour effectuer nos test unitaire, j'aurais aimé tester google test mais je veux pas amener trop de dépendences supplémentaire
 * [OpenCV 3.4.3](https://docs.opencv.org/3.4.3/) : pour le traitement d'image et nous allons utilisé les fonctionnalités cuda et contrib pour le tracking et la détection d'object.
-* [FFMPEG](https://www.ffmpeg.org/documentation.html) : pour faire le demuxing du stream video du drone pour qu'on puisse utilisé les images dans opencv mais je ne suis pas sur si on n'a besoin ou on peut le faire simplement.
+* ~~[FFMPEG](https://www.ffmpeg.org/documentation.html) : pour faire le demuxing du stream video du drone pour qu'on puisse utilisé les images dans opencv mais je ne suis pas sur si on n'a besoin ou on peut le faire simplement.~~
 * [CMake](https://cmake.org/documentation/) : comme système de build pour le projet
 
 Ce choix de librairie permet à notre sdk et notre application d'être compilé sur toute les plateformes majeurs
@@ -78,3 +78,56 @@ Le flux vidéo utilisé par le drone est H264 ( MPEG4.10 AVC ) et il peut être 
 * FPS : entre 15 et 30
 * Bitrate : entre 250kbps et 4Mbps
 * Résolution : 360p (640x360) ou 720p (1280x720)
+
+Les structures et les définitions du flux vidéo sont définit dans libardrone/include/video_common.h
+Et ce qu'il en résulte comme flux vidéo une fois reconstruit est la structure suivante qui représente une frame :
+
+```c++
+struct VideoPacket
+{
+	long Timestamp;
+	long Duration;
+	unsigned int FrameNumber;
+	unsigned short Height;
+	unsigned short Width;
+	frame_type_t FrameType;
+	ARBuffer Buffer;
+}
+```
+
+Pour reconstruire cette frame dans un flux vidéo demuxer nous allons utilisé "cudacodec.hpp" de OpenCV. Ce qui sera
+très avantageux pour nous car nos opérations de traitement d'image vont être executé en cuda ce qui va éviter une
+copie de plus vers le GPU.
+
+Pour utiliser opencv cuda pour accéder a des Mat depuis le flux video nous devons implémenter cv::cudacodec::RawVideoSource pour crée un cv::cudacodec::VideoReader qui est une interface de cv::VideoCapture comme dans le l'exemple suivant
+
+[Documentation cv::cudacodec]("https://docs.opencv.org/3.4.3/d0/d61/group__cudacodec.html")
+
+```c++
+
+class RawVideoSource {
+    virtual ~RawVideoSource ()
+ 
+    // Returns information about video file format. More...
+    virtual FormatInfo  format () const =0
+ 
+    // Returns next packet with RAW video frame. More...
+    virtual bool getNextPacket (unsigned char **data, int *size, bool *endOfFile)=0
+};
+
+// Pour l'utiliser de la sorte avec notre implémentation
+
+cv::cuda::GpuMat gframe;
+Ptr<VideoReader> videoReader = cv::cudacodec::createVideoReader(myRawVideoSource);
+
+for(;;) {
+    if(!videoReader->nextFrame(gFrame)) {
+        return :(;
+    }
+    cv::imshow("GPU", gFrame);
+}
+
+```
+
+
+

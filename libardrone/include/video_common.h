@@ -9,6 +9,15 @@ enum frame_type_t {
 	P
 };
 
+enum video_encapsulation_codecs_t
+{
+	CODEC_UNKNOWN = 0,
+	CODEC_VLIB,
+	CODEC_P264,
+	CODEC_MPEG4_VISUAL,
+	CODEC_MPEG4_AVC
+};
+
 
 enum video_encapsulation_frametypes_t
 {

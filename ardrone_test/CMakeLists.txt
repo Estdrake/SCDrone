@@ -7,11 +7,9 @@ if(MINGW)
     set(MINGW_LIBRARIES ws2_32)
 endif()
 
-set( TCLAP_INCLUDE_DIR "" CACHE PATH "The diretory containing tclap/CmdLine.h" ) # Cache path c'est pour les variables qui arrivent du mode cmd
 
 include_directories (
     "${PROJECT_SOURCE_DIR}/libardrone/include"
-    "${TCLAP_INCLUDE_DIR}"
 )
 
 # Add source to this project's executable.
