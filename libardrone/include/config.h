@@ -3,6 +3,8 @@
 
 #include "typedef.h"
 
+//#define BOOST_LOG_DYN_LINK 1
+
 // Définit les informations de base de connection
 #define WIFI_NETWORK_NAME   "ardrone2"
 #define WIFI_BROADCAST      "192.168.1.255"

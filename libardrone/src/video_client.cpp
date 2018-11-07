@@ -33,10 +33,6 @@ void VideoClient::run_service() {
 			BOOST_LOG_TRIVIAL(info) << "Length of data read " << len;
 
 			// Regarde si le premier buffer du stream est plein
-			
-
-			
-			
 		}
 	}
 	catch (const std::exception& e) {
