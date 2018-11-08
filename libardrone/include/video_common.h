@@ -67,12 +67,14 @@ struct video_encapsulation_t
 
 
 struct VideoFrame {
-	long Timestamp;
-	long Duration;
-	unsigned int FrameNumber;
-	unsigned short Height;
-	unsigned short Width;
-	video_encapsulation_frametypes_t FrameType;
+	// Le header de la frame
+	video_encapsulation_t	Header;
+
+	// Ou on n'est rendu dans la frame
+	int						Got;
+
+	// Les données recu
+	unsigned char*			Data;
 };
 
 

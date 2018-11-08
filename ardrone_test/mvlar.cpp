@@ -2,6 +2,7 @@
 
 #include <video_client.h>
 
+// mon fichier de thread c'est pas clair
 #include <thread.h>
 #include <fstream>
 
@@ -87,8 +88,10 @@ void printVideoStreamDump(video_encapsulation_t* PaVE) {
 }
 
 
+#define STREAM_SIZE 1024000
+
 int streamIndex = 0;
-unsigned char* stream = new unsigned char[1024000];
+unsigned char* stream = new unsigned char[STREAM_SIZE];
 
 void parseVideoStreamDump(const char* folderName, int nbrFile) {
 
@@ -150,14 +153,12 @@ void parseVideoStreamDump(const char* folderName, int nbrFile) {
 					memcpy(stream + streamIndex, vfBuffer, ve.payload_size);
 					streamIndex += ve.payload_size;
 					std::cout << "Frame is rebuilt stream index is now " << streamIndex  << std::endl;
-					return;
 				}
 			}
 		}
 		else {
-			memcpy_s(&ve, sizeof(video_encapsulation_t), buffer, sizeof(video_encapsulation_t));
+			memcpy(&ve,  buffer, sizeof(video_encapsulation_t));
 			printVideoStreamDump(&ve);
-
 			std::cout << "Payload size is " << ve.payload_size << std::endl;
 			// Crée mon buffer pour recevoir le payload
 			vfBuffer = new unsigned char[ve.payload_size];
@@ -165,26 +166,31 @@ void parseVideoStreamDump(const char* folderName, int nbrFile) {
 			int sizeData = length - ve.header_size;
 			std::cout << "Header size is " << ve.header_size << " and sizeof(video_encapsulation_t) is " << sizeof(video_encapsulation_t) << " Size data after header : " << sizeData << std::endl;
 			std::cout << "Missing " << ve.payload_size - sizeData << std::endl;
+			if (sizeData > ve.payload_size) {
+				sizeData = ve.payload_size;
+			}
 			currentSize = sizeData;
 			memcpy(vfBuffer, buffer+ve.header_size, sizeData);
 
 			if (ve.payload_size - sizeData == 0) {
+
 				memcpy(stream + streamIndex, vfBuffer, ve.payload_size);
 				streamIndex += ve.payload_size;
 				std::cout << "Frame is rebuilt stream index is now " << streamIndex << std::endl;
+
 			}
 		}
 		ifs.close();
 		delete[] buffer;
 	}
 
-	fs::path f = "stream.264";
+	fs::path f = "stream.bin";
 	// Écrit le stream vers un fichier
 	ofstream of(folder / f, ofstream::binary | ofstream::out);
 	of.seekp(0);
 	of.write((char*)stream, streamIndex);
 	of.close();
-	delete[] stream;
+	//delete[] stream;
 }
 
 class ARDroneRawVideoSource : public cv::cudacodec::RawVideoSource {
@@ -214,7 +220,7 @@ public:
 	}
 };
 
-
+/*
 extern "C" {
 #include "libavformat/avformat.h"
 #include "libavcodec/avcodec.h"
@@ -231,7 +237,7 @@ void processStream() {
 	av_log_set_level(AV_LOG_DEBUG);
 
 }
-
+*/
 
 
 int main()
@@ -246,13 +252,13 @@ int main()
 	
 	//std::cout << cv::getBuildInformation() << std::endl;
 
-	//TestTcp t;
-	//t.Connect(150,"D:\\l\\data");
-	parseVideoStreamDump("D:\\l\\data",50);
+	TestTcp t;
+	t.Connect(300,"D:\\l\\data");
+	parseVideoStreamDump("D:\\l\\data",300);
 
 	// Crée notre videoreader avec cuda et le shit envoie tout le temps la meme affaire
 	cv::Ptr<cv::cudacodec::RawVideoSource> raw = new ARDroneRawVideoSource();
-	try {
+	/*try {
 		cv::Ptr<cv::cudacodec::VideoReader> vr = cv::cudacodec::createVideoReader(raw);
 		cv::cuda::GpuMat frame;
 		if (!vr->nextFrame(frame)) {
@@ -267,7 +273,7 @@ int main()
 	catch (cv::Exception& e) {
 		std::cerr << "Exception: " << e.what() << std::endl;
 	}
-
+	*/
 
 	
 	cin.get();

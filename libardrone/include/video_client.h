@@ -2,32 +2,31 @@
 #define _VIDEO_CLIENT_H_
 #include "video_common.h"
 
-//#define FRAME_BUFFER_SIZE 0x1000000;
-//#define NETWORK_STREAM_SIZE 0x10000;
+#include <thread>
 
+#include <QtCore/QObject>
+#include <QtCore/QDebug>
+#include <QtNetwork/QTcpSocket>
 
-class VideoClient {
+class VideoClient : QObject {
 	
 public:
 	VideoClient();
 	~VideoClient();
 
+	std::thread spawn();
+	
 private:
 
+	QTcpSocket* socket;
 
-	// Variable sur le flux video
-	bool	isStopped;
+	QByteArray	bufferFrame;
 	
-	int		offset;
-	int		frameStart;
-	int		frameEnd;
-
-
-	bool hasVideoPacket;
-
+	// Indique si on n'est courrament connecter async avec le drone
+	bool	isConected;
 
 	void run_service();
-
+	
 };
 
 
