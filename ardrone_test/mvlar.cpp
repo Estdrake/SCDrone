@@ -18,7 +18,10 @@ using namespace std;
 
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
+
+#if defined(HAVE_OPENCV_CUDACODEC)
 #include <opencv2/cudacodec.hpp>
+#endif
 
 
 namespace fs = std::filesystem;
@@ -193,6 +196,8 @@ void parseVideoStreamDump(const char* folderName, int nbrFile) {
 	//delete[] stream;
 }
 
+#if defined(HAVE_OPENCV_CUDACODEC)
+
 class ARDroneRawVideoSource : public cv::cudacodec::RawVideoSource {
 
 public:
@@ -220,6 +225,8 @@ public:
 	}
 };
 
+#endif
+
 /*
 extern "C" {
 #include "libavformat/avformat.h"
@@ -243,22 +250,13 @@ void processStream() {
 int main()
 {
 	cout << "Hello CMake." << endl;
-
-	cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
-
 	#if defined(HAVE_OPENCV_CUDACODEC)
+	cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 	cout << "You got it" << endl;
-	#endif
-	
-	//std::cout << cv::getBuildInformation() << std::endl;
-
-	TestTcp t;
-	t.Connect(300,"D:\\l\\data");
-	parseVideoStreamDump("D:\\l\\data",300);
 
 	// Crée notre videoreader avec cuda et le shit envoie tout le temps la meme affaire
 	cv::Ptr<cv::cudacodec::RawVideoSource> raw = new ARDroneRawVideoSource();
-	/*try {
+	try {
 		cv::Ptr<cv::cudacodec::VideoReader> vr = cv::cudacodec::createVideoReader(raw);
 		cv::cuda::GpuMat frame;
 		if (!vr->nextFrame(frame)) {
@@ -273,7 +271,16 @@ int main()
 	catch (cv::Exception& e) {
 		std::cerr << "Exception: " << e.what() << std::endl;
 	}
-	*/
+	#endif
+	
+	//std::cout << cv::getBuildInformation() << std::endl;
+
+	TestTcp t;
+	t.Connect(300,"D:\\l\\data");
+	parseVideoStreamDump("D:\\l\\data",300);
+
+	
+	
 
 	
 	cin.get();
