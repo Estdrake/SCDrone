@@ -10,6 +10,11 @@ set(CMAKE_CXX_STANDARD 17)
 
 enable_testing()
 
+# Essaie d'include OpenCV
+find_package( OpenCV REQUIRED)
+include_directories( ${OpenCV_INCLUDE_DIRS} )
+
+
 # Include sub-projects.
 
 add_subdirectory("libardrone")

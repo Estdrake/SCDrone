@@ -9,7 +9,7 @@
       ],
       "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
       "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
-      "cmakeCommandArgs": "-DOpenCV_DIR=C:\\VC17_LIB\\opencv -DQt5Network_DIR=D:\\Qt\\5.11.2\\msvc2017_64\\lib\\cmake\\Qt5Network -DFFMPEG_INCLUDE_DIR=D:\\VC17_LIB\\ffmpeg\\include -DFFMPEG_LIBRARY_DIR=D:\\VC17_LIB\\ffmpeg\\lib",
+      "cmakeCommandArgs": "-DOpenCV_DIR=C:\\VC17_LIB\\opencv -DQt5Network_DIR=D:\\Qt\\5.11.2\\msvc2017_64\\lib\\cmake\\Qt5Network ",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": ""
     }

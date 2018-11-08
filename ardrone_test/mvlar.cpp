@@ -96,7 +96,6 @@ void parseVideoStreamDump(const char* folderName, int nbrFile) {
 	ve.frame_number = 0;
 
 	int currentSize;
-	int wantedSize;
 	unsigned char* vfBuffer;
 
 	int length;
@@ -214,6 +213,26 @@ public:
 		return true;
 	}
 };
+
+
+extern "C" {
+#include "libavformat/avformat.h"
+#include "libavcodec/avcodec.h"
+#include "libavutil/avutil.h"
+#include <libavutil/avutil.h>
+#include <libavutil/pixdesc.h>
+#include <libswscale/swscale.h>
+}
+
+
+void processStream() {
+	// Initiliaze la library ffmpeg avcodec
+	av_register_all();
+	av_log_set_level(AV_LOG_DEBUG);
+
+}
+
+
 
 int main()
 {
