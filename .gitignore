@@ -2,4 +2,4 @@
 .vscode/
 build/
 *.swp
-MakeSettings.json
+CMakeSettings.json

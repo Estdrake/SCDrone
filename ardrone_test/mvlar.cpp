@@ -18,7 +18,10 @@ using namespace std;
 
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
+
+#if defined(HAVE_OPENCV_CUDACODEC)
 #include <opencv2/cudacodec.hpp>
+#endif
 
 
 namespace fs = std::filesystem;
@@ -193,6 +196,8 @@ void parseVideoStreamDump(const char* folderName, int nbrFile) {
 	//delete[] stream;
 }
 
+#if defined(HAVE_OPENCV_CUDACODEC)
+
 class ARDroneRawVideoSource : public cv::cudacodec::RawVideoSource {
 
 public:
@@ -219,6 +224,8 @@ public:
 		return true;
 	}
 };
+
+#endif
 
 /*
 extern "C" {
@@ -276,15 +283,13 @@ void readVideoDumpWithCuda() {
 
 }
 
+
 int main()
 {
 	cout << "Hello CMake." << endl;
-	
-	//std::cout << cv::getBuildInformation() << std::endl;
-	//readVideoDumpWithCuda();
-	//TestTcp t;
-	//t.Connect(300,"/home/wq/Documents/Test/video_dump");
-	//parseVideoStreamDump("/home/wq/Documents/Test/video_dump",30);
+	#if defined(HAVE_OPENCV_CUDACODEC)
+	cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
+	cout << "You got it" << endl;
 
 	// Crée notre videoreader avec cuda et le shit envoie tout le temps la meme affaire
 	cv::Ptr<cv::cudacodec::RawVideoSource> raw = new ARDroneRawVideoSource();
@@ -303,6 +308,19 @@ int main()
 	catch (cv::Exception& e) {
 		std::cerr << "Exception: " << e.what() << std::endl;
 	}
+<<<<<<< HEAD
+=======
+	#endif
+	
+	//std::cout << cv::getBuildInformation() << std::endl;
+
+	TestTcp t;
+	t.Connect(300,"D:\\l\\data");
+	parseVideoStreamDump("D:\\l\\data",300);
+
+	
+	
+>>>>>>> 30d0945ebaa6579efc497d659b0358e84b18ebcc
 
 	
 	cin.get();
