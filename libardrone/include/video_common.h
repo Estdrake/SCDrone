@@ -65,92 +65,17 @@ struct video_encapsulation_t
 
 
 
-class ARBuffer {
-private:
-	std::unique_ptr<unsigned char[]> _data;
-	uint32_t						 _size;
 
-	// Non copiable
-	ARBuffer(const ARBuffer& other) { }
-
-public:
-	uint32_t getSize()const {
-		return _size;
-	}
-	unsigned char* getData()const {
-		return _data.get();
-	}
-
-	ARBuffer(unsigned char* dataToCpy, uint32_t size);
-	ARBuffer(uint32_t size);
-	ARBuffer(ARBuffer&& moved) :_data(std::move(moved._data)), _size(moved._size) {
-		moved._size = 0;
-	}
-
-	~ARBuffer(void);
-};
-
-
-
-struct VideoPacket
-{
+struct VideoFrame {
 	long Timestamp;
 	long Duration;
 	unsigned int FrameNumber;
 	unsigned short Height;
 	unsigned short Width;
-	frame_type_t FrameType;
-	ARBuffer Buffer;
-
-	VideoPacket(
-		long timestamp,
-		long duration,
-		unsigned int frameNumber,
-		unsigned short height,
-		unsigned short width,
-		frame_type_t frameType,
-		uint32_t bufferLength) :
-		Timestamp(timestamp),
-		Duration(Duration),
-		FrameNumber(frameNumber),
-		Height(height),
-		Width(width),
-		FrameType(frameType),
-		Buffer(bufferLength)
-	{
-	}
+	video_encapsulation_frametypes_t FrameType;
 };
 
 
-class ARStream {
-private:
-	bool						isFirstFrame; // 
-	unsigned int				firstFrameTimeStamp;
-	unsigned int				lastFrameTimeStamp;
-
-	uint32_t					offset;
-	uint32_t					bufferSize;
-
-	bool						isFirstFilled;
-	bool						isSecondFilled;
-
-	std::shared_ptr<ARBuffer>	first;
-	std::shared_ptr<ARBuffer>	second;
-
-	// Me faire une queue pour envoyé le shared_ptr d'un packet video assembler
-
-	void advance1Buffer();
-	bool findMagicWord();
-	
-	unsigned char at(uint32_t i) const;
-	//void newDataReceive(unsigned char* data, uint32_t count);
-	void copyTo(unsigned char* pOut, uint32_t count);
-
-public:
-	ARStream(uint32_t bufferSize);
-
-
-};
-
+bool getOffsetMagicWord(const char* data);
 
 #endif

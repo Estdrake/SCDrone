@@ -1,49 +1,74 @@
 ﻿#include "mvlar.h"
 
-#include <navdata_client.h>
 #include <video_client.h>
 
 #include <thread.h>
 #include <fstream>
 
 
-
-
 using namespace std;
 
-// RecordVideoStreamBuffer permet d'enregister les données recu de la transmission pour effectuer des test
-// avec un espace entre chaque trame
-void recordVideoStreamBuffer(int bufferSize, int nbrTrame, const char* fileName) {
-	boost::asio::io_service ios;
-	tcp::socket socket(ios);
-	tcp::endpoint remote = tcp::endpoint(boost::asio::ip::address::from_string(WIFI_ARDRONE_IP), VIDEO_PORT);
-	std::vector<uint8_t> buffer(bufferSize);
 
-	ofstream of(fileName, ofstream::binary | ofstream::out);
+#include <QtCore/QObject>
+#include <QtCore/QDebug>
+#include <QtNetwork/QTcpSocket>
 
-	size_t seekOutFile = 0;
+#include <filesystem>
 
-	try {
-		boost::system::error_code ex = boost::asio::error::host_not_found;
-		socket.connect(remote, ex);
-		if (ex) {
-			throw boost::system::system_error(ex);
-		}
-		for (int i = 0; i < nbrTrame;i++) {
-				size_t len = socket.read_some(boost::asio::buffer(buffer), ex);
-				BOOST_LOG_TRIVIAL(info) << "Length of data read " << len;
-				of.seekp(seekOutFile);
-				of.write((char*)buffer.data(),len);
-				seekOutFile += len + 100;
-				buffer.clear();
-		}
-		of.close();
-		socket.close();
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/cudacodec.hpp>
+
+
+namespace fs = std::filesystem;
+
+
+class TestTcp : public QObject {
+	//Q_OBJECT
+
+private:
+	QTcpSocket*	socket;
+public:
+	TestTcp(QObject *parent = 0) {
+
 	}
-	catch (const std::exception& e) {
-		BOOST_LOG_TRIVIAL(error) << e.what();
+
+	void Connect(int nbrIteration,std::string folderName) {
+		QByteArray ba;
+		socket = new QTcpSocket(this);
+
+		fs::path folder = folderName;
+		if (!fs::exists(folder)) {
+			qDebug() << "Dossier inexistant " << folder.c_str();
+			return;
+		}
+
+		socket->connectToHost("192.168.1.1", 5555);
+		if (socket->waitForConnected(3000)) {
+			qDebug() << "Connecter a l'host";
+			for (int i = 0; i < nbrIteration;) {
+				if (socket->waitForReadyRead()) {
+					qDebug() << socket->bytesAvailable();
+					ba = socket->readAll();
+					fs::path fileName = std::to_string(i) + ".bin";
+					fileName = folderName / fileName;
+					qDebug() << "Length of data receive " << ba.length() << " writting to " << fileName.c_str();
+					ofstream of(fileName, ofstream::binary | ofstream::out);
+					of.seekp(0);
+					of.write(ba.data(), ba.length());
+					of.close();
+					i++;
+				}
+			}
+		}
+		else {
+			qDebug() << "Could not connect to host";
+		}
+		socket->close();
 	}
-}
+
+};
+
 
 void printVideoStreamDump(video_encapsulation_t* PaVE) {
 	printf("Signature : \"%c%c%c%c\" [0x%02x][0x%02x][0x%02x][0x%02x]\n", PaVE->signature[0], PaVE->signature[1],
@@ -61,47 +86,172 @@ void printVideoStreamDump(video_encapsulation_t* PaVE) {
 	printf("Payload size : %d\n", PaVE->payload_size);
 }
 
-void parseVideoStreamDump(const char* file) {
+
+int streamIndex = 0;
+unsigned char* stream = new unsigned char[1024000];
+
+void parseVideoStreamDump(const char* folderName, int nbrFile) {
+
+	video_encapsulation_t ve;
+	ve.frame_number = 0;
+
+	int currentSize;
+	int wantedSize;
+	unsigned char* vfBuffer;
+
 	int length;
 	char* buffer;
 
-	ifstream ifs(file, ofstream::binary);
-	// Get la longeur du fichier pour savoir le buffer a prendre
-	ifs.seekg(0, ios::end);
-	length = ifs.tellg();
-	ifs.seekg(0, ios::beg);
+	fs::path folder = folderName;
 
-	if (length == 0) {
-		BOOST_LOG_TRIVIAL(error) << "No data in file " << file;
+	if (!fs::exists(folder)) {
+		std::cerr << "Folder dont exists " << folder << std::endl;
+		return;
 	}
 
-	buffer = new char[length];
+	for (int i = 0; i < nbrFile; i++) {
+		fs::path fileName = std::to_string(i) + ".bin";
+		fs::path file = folder / fileName;
+		ifstream ifs(file, ofstream::binary);
 
-	BOOST_LOG_TRIVIAL(info) << "File " << file << " length is " << length;
+		// Get la longeur du fichier pour savoir le buffer a prendre
+		ifs.seekg(0, ios::end);
+		length = ifs.tellg();
+		ifs.seekg(0, ios::beg);
 
-	 ifs.read(buffer, length);
+		if (length == 0) {
+			std::cerr << "No data in file " << file << std::endl;
+		}
 
-	 if (!ifs) {
-		 BOOST_LOG_TRIVIAL(error) << "Error only " << ifs.gcount() << " could be read";
-		 return;
-	 }
+		buffer = new char[length];
 
-	 video_encapsulation_t ve;
-	 memcpy_s(&ve, sizeof(video_encapsulation_t), buffer, sizeof(video_encapsulation_t));
-	 printVideoStreamDump(&ve);
+		std::cout << "File " << file << " length is " << length << std::endl;
 
-	 BOOST_LOG_TRIVIAL(info) << "Payload size is " << ve.payload_size;
+		ifs.read(buffer, length);
 
-	 ifs.close();
-	 delete[] buffer;
+		if (!ifs) {
+			std::cerr << "Error only " << ifs.gcount() << " could be read" << std::endl;
+			return;
+		}
+
+		// Trouve l'offset de PaVE
+
+		if (!getOffsetMagicWord(buffer)) {
+			if (ve.frame_number != 0) {
+				bool endFrame = false;
+				std::cout << "Got extra " << length << std::endl;
+				// get le nombre de byte qu'on veut prendre ce cette array
+				int nbrByte = length;
+				if (length + currentSize >= ve.payload_size) {
+					nbrByte = ve.payload_size - currentSize;
+					endFrame = true;
+				}
+				memcpy(vfBuffer + currentSize, buffer, nbrByte);
+				if (endFrame) {
+					memcpy(stream + streamIndex, vfBuffer, ve.payload_size);
+					streamIndex += ve.payload_size;
+					std::cout << "Frame is rebuilt stream index is now " << streamIndex  << std::endl;
+					return;
+				}
+			}
+		}
+		else {
+			memcpy_s(&ve, sizeof(video_encapsulation_t), buffer, sizeof(video_encapsulation_t));
+			printVideoStreamDump(&ve);
+
+			std::cout << "Payload size is " << ve.payload_size << std::endl;
+			// Crée mon buffer pour recevoir le payload
+			vfBuffer = new unsigned char[ve.payload_size];
+			// Copie les données qui sont apres le header
+			int sizeData = length - ve.header_size;
+			std::cout << "Header size is " << ve.header_size << " and sizeof(video_encapsulation_t) is " << sizeof(video_encapsulation_t) << " Size data after header : " << sizeData << std::endl;
+			std::cout << "Missing " << ve.payload_size - sizeData << std::endl;
+			currentSize = sizeData;
+			memcpy(vfBuffer, buffer+ve.header_size, sizeData);
+
+			if (ve.payload_size - sizeData == 0) {
+				memcpy(stream + streamIndex, vfBuffer, ve.payload_size);
+				streamIndex += ve.payload_size;
+				std::cout << "Frame is rebuilt stream index is now " << streamIndex << std::endl;
+			}
+		}
+		ifs.close();
+		delete[] buffer;
+	}
+
+	fs::path f = "stream.264";
+	// Écrit le stream vers un fichier
+	ofstream of(folder / f, ofstream::binary | ofstream::out);
+	of.seekp(0);
+	of.write((char*)stream, streamIndex);
+	of.close();
+	delete[] stream;
 }
+
+class ARDroneRawVideoSource : public cv::cudacodec::RawVideoSource {
+
+public:
+	
+	ARDroneRawVideoSource::ARDroneRawVideoSource() {
+
+	}
+
+	ARDroneRawVideoSource::~ARDroneRawVideoSource() {
+
+	}
+	cv::cudacodec::FormatInfo ARDroneRawVideoSource::format() const {
+		cv::cudacodec::FormatInfo fi;
+		fi.chromaFormat = cv::cudacodec::YUV420;
+		fi.codec = cv::cudacodec::MPEG4;
+		fi.width = 360;
+		fi.height = 640;
+		return fi;
+	}
+	bool ARDroneRawVideoSource::getNextPacket(unsigned char** data, int* size, bool* endOfFile) {
+		*endOfFile = false;
+		*size = streamIndex;
+		data = &stream;
+		return true;
+	}
+};
 
 int main()
 {
 	cout << "Hello CMake." << endl;
 
-	//recordVideoStreamBuffer(8096,4,"data.bin");
-	parseVideoStreamDump("D:\\l\\data.bin");
+	cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
+
+	#if defined(HAVE_OPENCV_CUDACODEC)
+	cout << "You got it" << endl;
+	#endif
+	
+	//std::cout << cv::getBuildInformation() << std::endl;
+
+	//TestTcp t;
+	//t.Connect(150,"D:\\l\\data");
+	parseVideoStreamDump("D:\\l\\data",50);
+
+	// Crée notre videoreader avec cuda et le shit envoie tout le temps la meme affaire
+	cv::Ptr<cv::cudacodec::RawVideoSource> raw = new ARDroneRawVideoSource();
+	try {
+		cv::Ptr<cv::cudacodec::VideoReader> vr = cv::cudacodec::createVideoReader(raw);
+		cv::cuda::GpuMat frame;
+		if (!vr->nextFrame(frame)) {
+			std::cerr << "Failed to get next frame" << std::endl;
+		}
+		else {
+			cv::imshow("GPU", frame);
+			cv::waitKey(0);
+		}
+
+	}
+	catch (cv::Exception& e) {
+		std::cerr << "Exception: " << e.what() << std::endl;
+	}
+
+
+	
 	cin.get();
+	delete[] stream;
 	return 0;
 }

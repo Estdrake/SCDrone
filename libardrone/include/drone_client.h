@@ -1,5 +1,5 @@
 #ifndef _DRONE_CLIENT_H_
-#define
+#define _DRONE_CLIENT_H_
 
 class drone_client {
 
