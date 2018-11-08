@@ -197,14 +197,14 @@ class ARDroneRawVideoSource : public cv::cudacodec::RawVideoSource {
 
 public:
 	
-	ARDroneRawVideoSource::ARDroneRawVideoSource() {
+	ARDroneRawVideoSource() {
 
 	}
 
-	ARDroneRawVideoSource::~ARDroneRawVideoSource() {
+	~ARDroneRawVideoSource() {
 
 	}
-	cv::cudacodec::FormatInfo ARDroneRawVideoSource::format() const {
+	cv::cudacodec::FormatInfo format() const {
 		cv::cudacodec::FormatInfo fi;
 		fi.chromaFormat = cv::cudacodec::YUV420;
 		fi.codec = cv::cudacodec::MPEG4;
@@ -212,7 +212,7 @@ public:
 		fi.height = 640;
 		return fi;
 	}
-	bool ARDroneRawVideoSource::getNextPacket(unsigned char** data, int* size, bool* endOfFile) {
+	bool getNextPacket(unsigned char** data, int* size, bool* endOfFile) {
 		*endOfFile = false;
 		*size = streamIndex;
 		data = &stream;
@@ -239,26 +239,56 @@ void processStream() {
 }
 */
 
+void readVideoDumpWithCuda() {
+	cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
+
+	#if defined(HAVE_OPENCV_CUDACODEC)
+		cout << "You got it" << endl;
+	#endif
+
+	cv::VideoCapture cap("/home/wq/Documents/Test/video_dump/stream.bin");
+	if(!cap.isOpened()) {
+		std::cerr << "Failed to read my dump";
+		return;
+	}
+
+	cv::Mat t;
+	cv::cuda::GpuMat gt;
+	cap >> t;
+	if(t.empty()) {
+		std::cerr << "Failed to get first frame" << std::endl;
+		return;
+	}
+
+	gt.upload(t);
+
+	cv::Mat d;
+
+	gt.download(d);
+
+
+	cv::imshow("First Frame", d);
+	cv::waitKey(0);
+	
+
+	cap.release();	
+
+
+}
 
 int main()
 {
 	cout << "Hello CMake." << endl;
-
-	cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
-
-	#if defined(HAVE_OPENCV_CUDACODEC)
-	cout << "You got it" << endl;
-	#endif
 	
 	//std::cout << cv::getBuildInformation() << std::endl;
-
-	TestTcp t;
-	t.Connect(300,"D:\\l\\data");
-	parseVideoStreamDump("D:\\l\\data",300);
+	//readVideoDumpWithCuda();
+	//TestTcp t;
+	//t.Connect(300,"/home/wq/Documents/Test/video_dump");
+	//parseVideoStreamDump("/home/wq/Documents/Test/video_dump",30);
 
 	// Crée notre videoreader avec cuda et le shit envoie tout le temps la meme affaire
 	cv::Ptr<cv::cudacodec::RawVideoSource> raw = new ARDroneRawVideoSource();
-	/*try {
+	try {
 		cv::Ptr<cv::cudacodec::VideoReader> vr = cv::cudacodec::createVideoReader(raw);
 		cv::cuda::GpuMat frame;
 		if (!vr->nextFrame(frame)) {
@@ -273,7 +303,6 @@ int main()
 	catch (cv::Exception& e) {
 		std::cerr << "Exception: " << e.what() << std::endl;
 	}
-	*/
 
 	
 	cin.get();

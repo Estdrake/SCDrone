@@ -6,6 +6,7 @@
 #include <thread>
 #include <queue>
 #include <list>
+#include <condition_variable>
 
 
 enum ar_drone_workers {
