@@ -29,5 +29,7 @@ private:
 	
 };
 
+void printVideoStreamDump(video_encapsulation_t* PaVE);
+
 
 #endif

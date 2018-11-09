@@ -8,15 +8,29 @@ project ("mvdrone")
 # Déclare les dépendences de buid
 set(CMAKE_CXX_STANDARD 17)
 
+set( TCLAP_INCLUDE_DIR "" CACHE PATH "The path containing tclap/TclpCmd.h")
+set( LIBAV_INCLUDE_DIR "" CACHE PATH "The path containing libavcodec/avcodec.h")
+set( LIBAV_LIBRARY_DIR "" CACHE PATH "The path containing avcodec.a or avcodec.lib")
+
 enable_testing()
 
-# Essaie d'include OpenCV
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 find_package( OpenCV REQUIRED)
-include_directories( ${OpenCV_INCLUDE_DIRS} )
+find_package( Qt5Network REQUIRED)
 
+include_directories( 
+	${OpenCV_INCLUDE_DIRS}
+	${TCLAP_INCLUDE_DIR}
+	${LIBAV_INCLUDE_DIR}
+)
+
+link_directories(
+	${LIBAV_LIBRARY_DIR}
+)
+
+set ( LIBAV_LIBS avcodec avutil avformat)
 
 # Include sub-projects.
-
 add_subdirectory("libardrone")
 add_subdirectory("libcontrol")
 add_subdirectory ("ardrone_test")
