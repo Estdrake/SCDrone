@@ -70,7 +70,10 @@ inline void parseVideoStreamDump(fs::path folder, int nbrFile, bool to_stream = 
 		return;
 	}
 
+	int nbr = 0;
+
 	for (int i = 0; i < nbrFile; i++) {
+		
 		fs::path fileName = std::to_string(i) + ".bin";
 		fs::path file = folder / fileName;
 		ifstream ifs(file, ofstream::binary);
@@ -115,7 +118,8 @@ inline void parseVideoStreamDump(fs::path folder, int nbrFile, bool to_stream = 
 						std::cout << "Frame is rebuilt stream index is now " << streamIndex << std::endl;
 					} else
 					{
-						fs::path f = std::to_string(i) + ".raw";
+						fs::path f = std::to_string(nbr) + ".raw";
+						nbr += 1;
 						f = folder / f;
 						// Écrit le stream vers un fichier
 						ofstream of(f, ofstream::binary | ofstream::out);
@@ -150,7 +154,8 @@ inline void parseVideoStreamDump(fs::path folder, int nbrFile, bool to_stream = 
 				}
 				else
 				{
-					fs::path f = std::to_string(i) + ".raw";
+					fs::path f = std::to_string(nbr) + ".raw";
+					nbr += 1;
 					f = folder / f;
 					// Écrit le stream vers un fichier
 					ofstream of(f, ofstream::binary | ofstream::out);

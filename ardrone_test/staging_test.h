@@ -58,6 +58,7 @@ inline cv::Mat avframe_to_mat(const AVFrame* avframe)
 	return m;
 	
 }
+AVCodecContext* codec_context = nullptr;
 
 inline bool init_stream(const unsigned char* data, int len)
 {
@@ -66,7 +67,6 @@ inline bool init_stream(const unsigned char* data, int len)
 
 	const AVCodecID codec_id = AV_CODEC_ID_H264;
 	AVCodec* codec = avcodec_find_encoder(codec_id);
-	AVCodecContext* codec_context = nullptr;
 
 	int br = 1000000;
 	int w = 640;
@@ -75,13 +75,11 @@ inline bool init_stream(const unsigned char* data, int len)
 	int fps = 24;
 
 	// Crée le container pour le stream
-	AVOutputFormat* of = av_guess_format(0, file, 0);
+	//AVOutputFormat* of = av_guess_format(0, file, 0);
 	fc = avformat_alloc_context();
-	fc->oformat = of;
-	strcpy(fc->url, file);
 
 	// ajoute un stream video
-	AVStream* pst = avformat_new_stream(fc, 0); // Pourquoi je passe pas le codec ici ?
+	AVStream* pst = avformat_new_stream(fc, codec); // Pourquoi je passe pas le codec ici ?
 	vi = pst->index;
 
 	codec_context = avcodec_alloc_context3(codec);
@@ -109,7 +107,8 @@ inline bool init_stream(const unsigned char* data, int len)
 }
 
 // https://ffmpeg.org/doxygen/trunk/doc_2examples_2decoding__encoding_8c-example.html
-// https://stackoverflow.com/questions/5964142/raw-h264-frames-in-mpegts-container-using-libavcodec// https://stackoverflow.com/questions/44852117/libav-avframe-to-opencv-mat-to-avpacket-conversion
+// https://stackoverflow.com/questions/5964142/raw-h264-frames-in-mpegts-container-using-libavcodec
+// https://stackoverflow.com/questions/44852117/libav-avframe-to-opencv-mat-to-avpacket-conversion
 
 inline void append_stream(const unsigned char* data, int len)
 {
@@ -123,13 +122,25 @@ inline void append_stream(const unsigned char* data, int len)
 	AVPacket pkt;
 	AVFrame* frame;
 
+	frame = av_frame_alloc();
 
+	if (!frame)
+	{
+		cerr << "Could not allocate video frame" << endl;
+		return;
+	}
+
+	frame->format = codec_context->pix_fmt;
+	frame->width = codec_context->width;
+	frame->height = codec_context->height;
+
+	// Alloue la mémoire de la frame
+	int ret = av_image_alloc(frame->data, frame->linesize, codec_context->width, codec_context->height, codec_context->pix_fmt, 32);
 
 	// Init un nouveau packet
 	av_init_packet(&pkt);
-	pkt.data = nullptr; // Permet que le packet data soit alloquer par l'encoder
+	pkt.data = nullptr;
 	pkt.size = 0;
-
 
 }
 
@@ -143,19 +154,18 @@ inline void execute_staging_test(const fs::path& folder, int nbr_trame)
 		return;
 	}
 
-	av_log_set_level(AV_LOG_ERROR);
+	av_log_set_level(AV_LOG_DEBUG);
+
 	av_register_all();
 
 	int length = 0;
 	char* buffer;
 
-	for(const auto & file : fs::directory_iterator(folder))
+	for(int i = 0; i < nbr_trame;i++)
 	{
-		if(fs::path(file).extension() != ".raw")
-		{
-			return;
-		}
-		cout << "Got frame on " << file.path().string();
+		fs::path file = std::to_string(i) + ".raw";
+		file = folder / file;
+		cout << "Got frame on " << file.string() << endl;
 		ifstream ifs(file, ofstream::binary);
 
 		// Get la longeur du fichier pour savoir le buffer a prendre
@@ -180,11 +190,11 @@ inline void execute_staging_test(const fs::path& folder, int nbr_trame)
 			{
 				return;
 			}
-		} else
+		}
+		if(fc)
 		{
 			append_stream((unsigned char*)buffer, length);
-		}
-		
+		}	
 	}
 }
 
