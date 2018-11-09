@@ -16,6 +16,7 @@ inline void test_find_wifi() {
 	wifi_list.clear();
 	for(auto& x : net_cfg_list)
 	{
+		qDebug() << x.identifier() << " " << x.name();
 		if(x.bearerType() == QNetworkConfiguration::BearerWLAN)
 		{
 			if(x.name() == "")

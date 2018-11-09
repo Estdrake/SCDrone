@@ -11,12 +11,11 @@ private:
 	QTcpSocket*	socket;
 public:
 	TestTcp(QObject *parent = 0) {
-
+		socket = new QTcpSocket(this);
 	}
 
-	void Connect(int nbrIteration, fs::path folder) {
+	void Connect(int nbrIteration,const fs::path& folder) {
 		QByteArray ba;
-		socket = new QTcpSocket(this);
 
 		if (!fs::exists(folder)) {
 			qDebug() << "Dossier inexistant " << folder.c_str();
@@ -54,7 +53,7 @@ public:
 int streamIndex = 0;
 unsigned char* stream;
 
-inline void parseVideoStreamDump(fs::path folder, int nbrFile) {
+inline void parseVideoStreamDump(fs::path folder, int nbrFile, bool to_stream = true) {
 
 	video_encapsulation_t ve;
 	ve.frame_number = 0;
@@ -110,9 +109,20 @@ inline void parseVideoStreamDump(fs::path folder, int nbrFile) {
 				}
 				memcpy(vfBuffer + currentSize, buffer, nbrByte);
 				if (endFrame) {
-					memcpy(stream + streamIndex, vfBuffer, ve.payload_size);
-					streamIndex += ve.payload_size;
-					std::cout << "Frame is rebuilt stream index is now " << streamIndex << std::endl;
+					if (to_stream) {
+						memcpy(stream + streamIndex, vfBuffer, ve.payload_size);
+						streamIndex += ve.payload_size;
+						std::cout << "Frame is rebuilt stream index is now " << streamIndex << std::endl;
+					} else
+					{
+						fs::path f = std::to_string(i) + ".raw";
+						f = folder / f;
+						// Écrit le stream vers un fichier
+						ofstream of(f, ofstream::binary | ofstream::out);
+						of.seekp(0);
+						of.write((char*)vfBuffer, ve.payload_size);
+						of.close();
+					}
 				}
 			}
 		}
@@ -133,23 +143,39 @@ inline void parseVideoStreamDump(fs::path folder, int nbrFile) {
 			memcpy(vfBuffer, buffer + ve.header_size, sizeData);
 
 			if (ve.payload_size - sizeData == 0) {
-
-				memcpy(stream + streamIndex, vfBuffer, ve.payload_size);
-				streamIndex += ve.payload_size;
 				std::cout << "Frame is rebuilt stream index is now " << streamIndex << std::endl;
-
+				if (to_stream) {
+					memcpy(stream + streamIndex, vfBuffer, ve.payload_size);
+					streamIndex += ve.payload_size;
+				}
+				else
+				{
+					fs::path f = std::to_string(i) + ".raw";
+					f = folder / f;
+					// Écrit le stream vers un fichier
+					ofstream of(f, ofstream::binary | ofstream::out);
+					of.seekp(0);
+					of.write((char*)vfBuffer, ve.payload_size);
+					of.close();
+				}
 			}
 		}
 		ifs.close();
 		delete[] buffer;
 	}
+	if (to_stream) {
+		fs::path f = "stream.bin";
+		// Écrit le stream vers un fichier
+		ofstream of(folder / f, ofstream::binary | ofstream::out);
+		of.seekp(0);
+		of.write((char*)stream, streamIndex);
+		of.close();
+	}
+}
 
-	fs::path f = "stream.bin";
-	// Écrit le stream vers un fichier
-	ofstream of(folder / f, ofstream::binary | ofstream::out);
-	of.seekp(0);
-	of.write((char*)stream, streamIndex);
-	of.close();
+inline void parse_video_packet_raw_file(fs::path folder,int nbr_trame)
+{
+	parseVideoStreamDump(folder, nbr_trame, false);
 }
 
 

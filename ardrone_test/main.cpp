@@ -15,7 +15,7 @@ using namespace std;
 int main(int argv, char ** argc )
 {
 
-	bool run_video_test = false, run_cuda_test = false, run_staging_test = false, run_wifi_test = false;
+	bool run_video_test = false, run_cuda_test = false, run_staging_test = false, run_wifi_test = false, run_raw_convert = false;
 	
 	fs::path folder;
 
@@ -35,6 +35,7 @@ int main(int argv, char ** argc )
 		TCLAP::SwitchArg cuda_test_arg("c", "cuda_test", "Run test for cuda", cmd, false);
 		TCLAP::SwitchArg staging_test_arg("s", "staging_test", "Run staging test", cmd, false);
 		TCLAP::SwitchArg test_wifi_arg("w", "wifi_test", "Run wifi test with drone", cmd, false);
+		TCLAP::SwitchArg convert_frame_arg("r", "raw", "Extract the saved frame to raw frame", cmd, false);
 
 
 		cmd.parse(argv, argc);
@@ -42,6 +43,7 @@ int main(int argv, char ** argc )
 		run_cuda_test = cuda_test_arg.getValue();
 		run_staging_test = staging_test_arg.getValue();
 		run_wifi_test = test_wifi_arg.getValue();
+		run_raw_convert = convert_frame_arg.getValue();
 		folder = folder_arg.getValue();
 		nbr_trame = nbr_trame_arg.getValue();
 
@@ -55,13 +57,14 @@ int main(int argv, char ** argc )
 		cerr << "Folder don't exists " << folder << endl;
 		return 1;
 	}
-
+	if (run_raw_convert)
+		parse_video_packet_raw_file(folder, nbr_trame);
 	if (run_video_test)
 		execute_video_test(folder,nbr_trame);
 	if (run_cuda_test)
 		execute_cuda_test(folder);
 	if (run_staging_test)
-		execute_staging_test(folder);
+		execute_staging_test(folder,nbr_trame);
 	if (run_wifi_test)
 		execute_wifi_test();
 		
