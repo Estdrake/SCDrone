@@ -28,7 +28,7 @@ link_directories(
 	${LIBAV_LIBRARY_DIR}
 )
 
-set ( LIBAV_LIBS avcodec avutil avformat)
+set ( LIBAV_LIBS avcodec avutil avformat swscale)
 
 # Include sub-projects.
 add_subdirectory("libardrone")

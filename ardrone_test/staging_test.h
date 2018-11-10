@@ -13,23 +13,13 @@ extern "C" {
 	#include <libswscale/swscale.h>
 }
 
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
+
+/*
 AVFormatContext* fc = 0;
 int vi = -1; // vi veut dire video index
 
-inline void process_stream() {
-}
-
-// enfaite pense pas qu'on aille a valider le nal,
-inline int get_nal_type(const char* data, int len)
-{
-	// Data pas assez long pour avoir un NAL
-	if (!data || 5 >= len)
-		return -1;
-
-	// Trouve la valeur du premier NAL
-	
-	return 0;
-}
 
 inline cv::Mat avframe_to_mat(const AVFrame* avframe)
 {
@@ -58,15 +48,21 @@ inline cv::Mat avframe_to_mat(const AVFrame* avframe)
 	return m;
 	
 }
-AVCodecContext* codec_context = nullptr;
 
-inline bool init_stream(const unsigned char* data, int len)
+inline bool init_stream(unsigned char* data, int len)
 {
 
 	const char* file = "test.avi";
 
 	const AVCodecID codec_id = AV_CODEC_ID_H264;
 	AVCodec* codec = avcodec_find_encoder(codec_id);
+	// Crée le container pour le stream
+	fc = avformat_alloc_context();
+
+	AVOutputFormat *of = av_guess_format(0, file, 0);
+	fc = avformat_alloc_context();
+	fc->oformat = of;
+	strcpy(fc->filename, file);
 
 	int br = 1000000;
 	int w = 640;
@@ -74,9 +70,7 @@ inline bool init_stream(const unsigned char* data, int len)
 
 	int fps = 24;
 
-	// Crée le container pour le stream
-	//AVOutputFormat* of = av_guess_format(0, file, 0);
-	fc = avformat_alloc_context();
+;
 
 	// ajoute un stream video
 	AVStream* pst = avformat_new_stream(fc, codec); // Pourquoi je passe pas le codec ici ?
@@ -103,6 +97,12 @@ inline bool init_stream(const unsigned char* data, int len)
 		return false;
 	}
 
+	if (!(fc->oformat->flags & AVFMT_NOFILE))
+		avio_open(&fc->pb, fc->filename,0);
+
+	avformat_write_header(fc,nullptr);
+
+
 	return true;
 }
 
@@ -110,7 +110,7 @@ inline bool init_stream(const unsigned char* data, int len)
 // https://stackoverflow.com/questions/5964142/raw-h264-frames-in-mpegts-container-using-libavcodec
 // https://stackoverflow.com/questions/44852117/libav-avframe-to-opencv-mat-to-avpacket-conversion
 
-inline void append_stream(const unsigned char* data, int len)
+inline void append_stream(uint8_t* data, int len)
 {
 	if( 0 > vi)
 	{
@@ -120,27 +120,20 @@ inline void append_stream(const unsigned char* data, int len)
 	AVStream* pst = fc->streams[vi];
 
 	AVPacket pkt;
-	AVFrame* frame;
 
-	frame = av_frame_alloc();
-
-	if (!frame)
-	{
-		cerr << "Could not allocate video frame" << endl;
-		return;
-	}
-
-	frame->format = codec_context->pix_fmt;
-	frame->width = codec_context->width;
-	frame->height = codec_context->height;
-
-	// Alloue la mémoire de la frame
-	int ret = av_image_alloc(frame->data, frame->linesize, codec_context->width, codec_context->height, codec_context->pix_fmt, 32);
 
 	// Init un nouveau packet
 	av_init_packet(&pkt);
-	pkt.data = nullptr;
-	pkt.size = 0;
+	pkt.flags |= AV_PKT_FLAG_KEY;
+	pkt.data = data;
+	pkt.stream_index = pst->index;
+	pkt.size = len;
+
+	pkt.dts = AV_NOPTS_VALUE;
+	pkt.pts = AV_NOPTS_VALUE;
+
+	av_interleaved_write_frame(fc, &pkt);
+
 
 }
 
@@ -153,11 +146,11 @@ inline void execute_staging_test(const fs::path& folder, int nbr_trame)
 		cerr << "The file " << file_name.string() << " does not exists" << endl;
 		return;
 	}
+;
+
+	avcodec_register_all();
 
 	av_log_set_level(AV_LOG_DEBUG);
-
-	av_register_all();
-
 	int length = 0;
 	char* buffer;
 
@@ -184,6 +177,10 @@ inline void execute_staging_test(const fs::path& folder, int nbr_trame)
 
 		ifs.read(buffer, length);
 
+		cv::VideoWriter vw;
+		int codec = cv::VideoWriter::fourcc('X', '2', '6', '4');
+		
+
 		if(!fc)
 		{
 			if(!init_stream((unsigned char*)buffer, length))
@@ -197,5 +194,91 @@ inline void execute_staging_test(const fs::path& folder, int nbr_trame)
 		}	
 	}
 }
+*/
 
+class video_decoder
+{
+private:
+	AVPixelFormat		format;
+	int					width;
+	int					height;
+	int					bit_rate;
+	int					fps;
+
+	unsigned int		num_picture_decoded = 0;
+
+	AVCodec*			codec;
+	AVCodecContext*		codec_ctx;
+
+	AVFrame*			frame;
+	AVFrame*			frame_output;
+
+	uint8_t**			buffer_array;
+	uint8_t*			buffer;
+
+	SwsContext*			img_convert_ctx;
+public:
+	video_decoder();
+	~video_decoder();
+
+};
+
+inline video_decoder::video_decoder()
+{
+	avcodec_register_all();
+	av_log_set_level(AV_LOG_DEBUG);
+
+	const AVCodecID codec_id = AV_CODEC_ID_H264;
+	codec = avcodec_find_encoder(codec_id);
+	if(nullptr == codec)
+	{
+		// echer de recuperation du codec devrait pas arriver
+	}
+
+	format = AV_PIX_FMT_BGR24;
+	bit_rate = 1000000;
+	width = 640;
+	height = 360;
+	fps = 24;
+
+	codec_ctx = avcodec_alloc_context3(codec);
+
+	codec_ctx->bit_rate = bit_rate;
+	codec_ctx->width = width;
+	codec_ctx->height = height;
+	codec_ctx->time_base = { 1,fps };
+	codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
+	codec_ctx->skip_frame = AVDISCARD_DEFAULT;
+	codec_ctx->error_concealment = FF_EC_GUESS_MVS | FF_EC_DEBLOCK;
+	codec_ctx->skip_loop_filter = AVDISCARD_DEFAULT;
+	codec_ctx->workaround_bugs = FF_BUG_AUTODETECT;
+	codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
+	codec_ctx->codec_id = AV_CODEC_ID_H264;
+	codec_ctx->skip_idct = AVDISCARD_DEFAULT;
+
+	// Enfaire devrait peux etre mettre l'option fast si on n'a besoin de vitesse
+	//av_opt_set(codec_context->priv_data, "preset", "slow", 0);
+
+	// Ouvre notre codec	
+	if (avcodec_open2(codec_ctx, codec, nullptr) < 0)
+	{
+		cerr << "Impossible d'ouvrir le codec" << endl;
+		return;
+	}
+
+	frame_output = av_frame_alloc();
+	frame = av_frame_alloc();
+
+	buffer_array = (uint8_t**)malloc(sizeof(uint8_t*));
+	buffer = nullptr;
+	img_convert_ctx = nullptr;
+}
+
+inline video_decoder::~video_decoder()
+{
+}
+inline void execute_staging_test(const fs::path& folder, int nbr_trame)
+{
+	video_decoder vd;
+}
 #endif
