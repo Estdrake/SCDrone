@@ -5,8 +5,11 @@
 #include <atomic>
 #include <thread>
 #include <queue>
-#include <list>
+#include <chrono>
 #include <condition_variable>
+#include <qstring.h>
+#include "video_common.h"
+#include <iostream>
 
 
 enum ar_drone_workers {
@@ -28,6 +31,15 @@ private:
 
 public:
 
+	dataType& pop()
+	{
+		std::unique_lock<std::mutex> lk(mutex);
+		cv.wait(lk, [this] { return !queue.empty(); }); // Attend que la queue ne soit plus vide et utiliser
+		dataType& f = queue.front();
+		queue.pop();
+		return f;
+	}
+
 	void push(dataType const& data) {
 		forceExit.store(false);
 		std::unique_lock<std::mutex> lk(mutex);
@@ -36,13 +48,12 @@ public:
 		cv.notify_one();
 	}
 
-	bool isEmpty() const {
+	bool isEmpty() {
 		std::unique_lock<std::mutex> lk(mutex);
 		return queue.empty();
 	}
 
-
-
 };
+
 
 #endif // _THREAD_H_

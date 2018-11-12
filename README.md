@@ -35,15 +35,15 @@ Pour ce faire nous avons comme références :
 
 Les technologies suivantes sont utilisé par au moins une composante : 
 
-* [C++11](https://en.wikipedia.org/wiki/C%2B%2B11) : on pourrait utilisé une version plus récente comme 2017 je suppose mais je pense pas avoir besoin des features sauf peux-être pour le filesystem
-* [Boost 1.68](https://www.boost.org/doc/libs/1_68_0/doc/html/) : nous allons utilisé boost pour les composantes suivantes :
-    * Asio   : pour communication TCP et UDP
-    * Thread : qui revient au même que std::thread mais vu qu'on utilise boost pour le reste autant rester dans le namespace
+* [C++17](https://en.wikipedia.org/wiki/C%2B%2B11) : nous utilisons c++17 car nous roulons exculisvement sur des compilateurs récent et je voulais utilisé std::filesystem
+* [Qt](https://www.qt.io/developers/) : nous allons utilisé boost pour les composantes suivantes :
+    * QNetwork   : pour communication TCP et UDP
     * Log    : pour gérer nos niveau de log et wrapper des informations supplémenatire pour faciliter le débuggage
-    * Test   : pour effectuer nos test unitaire, j'aurais aimé tester google test mais je veux pas amener trop de dépendences supplémentaire
 * [OpenCV 3.4.3](https://docs.opencv.org/3.4.3/) : pour le traitement d'image et nous allons utilisé les fonctionnalités cuda et contrib pour le tracking et la détection d'object.
-* ~~[FFMPEG](https://www.ffmpeg.org/documentation.html) : pour faire le demuxing du stream video du drone pour qu'on puisse utilisé les images dans opencv mais je ne suis pas sur si on n'a besoin ou on peut le faire simplement.~~
+* [FFMPEG](https://www.ffmpeg.org/documentation.html) : pour faire le demuxing du stream video du drone pour qu'on puisse utilisé les images dans opencv mais je ne suis pas sur si on n'a besoin ou on peut le faire simplement.~~
 * [CMake](https://cmake.org/documentation/) : comme système de build pour le projet
+* [Catch2](https://github.com/catchorg/Catch2) : système de test unitaire
+
 
 Ce choix de librairie permet à notre sdk et notre application d'être compilé sur toute les plateformes majeurs
 sans problème sauf pour la dépendence à cuda qui coupe la possiblité d'être executer sur rasberry pi, android,
@@ -94,38 +94,8 @@ struct VideoPacket
 	ARBuffer Buffer;
 }
 ```
-
-Pour reconstruire cette frame dans un flux vidéo demuxer nous allons utilisé "cudacodec.hpp" de OpenCV. Ce qui sera
-très avantageux pour nous car nos opérations de traitement d'image vont être executé en cuda ce qui va éviter une
-copie de plus vers le GPU.
-
-Pour utiliser opencv cuda pour accéder a des Mat depuis le flux video nous devons implémenter cv::cudacodec::RawVideoSource pour crée un cv::cudacodec::VideoReader qui est une interface de cv::VideoCapture comme dans le l'exemple suivant
-
-[Documentation cv::cudacodec]("https://docs.opencv.org/3.4.3/d0/d61/group__cudacodec.html")
-
-```c++
-
-class RawVideoSource {
-    virtual ~RawVideoSource ()
- 
-    // Returns information about video file format. More...
-    virtual FormatInfo  format () const =0
- 
-    // Returns next packet with RAW video frame. More...
-    virtual bool getNextPacket (unsigned char **data, int *size, bool *endOfFile)=0
-};
-
-// Pour l'utiliser de la sorte avec notre implémentation
-
-cv::cuda::GpuMat gframe;
-Ptr<VideoReader> videoReader = cv::cudacodec::createVideoReader(myRawVideoSource);
-
-for(;;) {
-    if(!videoReader->nextFrame(gFrame)) {
-        return :(;
-    }
-    cv::imshow("GPU", gFrame);
-}
+Les frames sont de deux type : IDR-Frame ( une frame complète de référence ) et les P-Frame ( frame d'update ) pour notre cas d'utiliation
+nous n'avons pas vraiment besoin de flux vidéo et nous pourrious seulement récuperer les IDR-Frame pour les convertir en cv::Mat.
 
 ```
 

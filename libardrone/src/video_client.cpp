@@ -4,7 +4,7 @@
 #include <thread>
 
 
-void printVideoStreamDump(video_encapsulation_t* PaVE) {
+void print_video_stream_dump(video_encapsulation_t* PaVE) {
 	printf("Signature : \"%c%c%c%c\" [0x%02x][0x%02x][0x%02x][0x%02x]\n", PaVE->signature[0], PaVE->signature[1],
 		PaVE->signature[2], PaVE->signature[3], PaVE->signature[0], PaVE->signature[1], PaVE->signature[2], PaVE->signature[3]);
 	printf("Frame Type / Number : %s : %d : slice %d/%d\n",
@@ -21,50 +21,86 @@ void printVideoStreamDump(video_encapsulation_t* PaVE) {
 }
 
 
-VideoClient::VideoClient() : isConected(false) {
-	// Démarre la thread de video
+VideoClient::VideoClient(ConcurrentQueue<VideoFrame>* queue)
+{
+	this->socket = new QTcpSocket(this);
+	this->queue = queue;
 }
 
-VideoClient::~VideoClient() {
+VideoClient::~VideoClient() = default;
 
+std::thread VideoClient::start()
+{
+	socket->connectToHost(WIFI_ARDRONE_IP, VIDEO_PORT);
+	return std::thread([this] { this->run_service();  });
 }
-
-std::thread VideoClient::spawn() {
-	return std::thread([this] { this->run_service(); });
-}
-
 
 void VideoClient::run_service() {
 	QByteArray readBuffer;
 
-	VideoFrame vf;
+	VideoFrame vf{};
 	vf.Header.frame_number = 0;
 	vf.Got = 0;
 
-	socket = new QTcpSocket(this);
 
-	socket->connectToHost(WIFI_ARDRONE_IP, VIDEO_PORT);
 	if (socket->waitForConnected(3000)) {
 		for (;;) {
 			if (socket->waitForReadyRead()) {
 				readBuffer = socket->readAll();
+				int length = readBuffer.length();
+				bool endFrame = false;
 				// Regarde si le buffer commence par PaVE se qui indique qu'on na une nouvelle trame
 				if (getOffsetMagicWord(readBuffer)) {
 					// Copie le header de la frame dans la structure
 					memcpy(&vf.Header, readBuffer, sizeof(video_encapsulation_t));
+#ifdef DEBUG_VIDEO_CLIENT
+					print_video_stream_dump(&vf.Header);
+#endif
 					// Devrait peux etre faire une validation ici
-
 					vf.Data = new unsigned char[vf.Header.payload_size];
-					int length = readBuffer.length();
-					int sizeData = length - vf.Header.header_size;
-					int missing = vf.Header.payload_size - sizeData;
+					vf.Got = length - vf.Header.header_size;
+					const int missing = vf.Header.payload_size - vf.Got;
 
-					memcpy(vf.Data, readBuffer.data() + vf.Header.header_size, sizeData);
+					memcpy(vf.Data, readBuffer.data() + vf.Header.header_size, vf.Got);
 
 					if (missing == 0) {
-						// Notre VideoFrame est complete l'envoie a la queue 
-
+						endFrame = true;
 					}
+#ifdef DEBUG_VIDEO_CLIENT
+					qDebug() << "Missing " << missing << " bytes from frame " << vf.Header.frame_number;
+#endif
+				} else
+				{
+					// Il doit s'agir du reste d'une trame manquante
+					// valide qu'on n'a deja des data
+					if(vf.Got == 0)
+					{
+#ifdef DEBUG_VIDEO_CLIENT
+						qDebug() << "Receive data but no previous PaVE";
+#endif
+						// mauvais data on n'a jamais recu de PaVE
+						continue;
+					}
+#ifdef DEBUG_VIDEO_CLIENT
+					qDebug() << "Receive extra data to fill buffer " << length;
+#endif
+					if(length + vf.Got >= vf.Header.payload_size)
+					{
+						// ya trop de data pour ce qu'on n'a besoin
+						length = vf.Header.payload_size - vf.Got;
+						endFrame = true;
+					}
+					memcpy(vf.Data + vf.Got, readBuffer.data(), length);
+					vf.Got += length;
+				}
+
+				if (endFrame)
+				{
+#ifdef DEBUG_VIDEO_CLIENT
+					qDebug() << "Pushing frame " << vf.Header.frame_number;
+#endif
+					queue->push(vf);
+					vf.Got = 0;
 				}
 			}
 			else {

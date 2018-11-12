@@ -16,13 +16,14 @@ configure_file (
 	"${CMAKE_CURRENT_BINARY_DIR}/build_info.h"
 )
 
+
 # Add source to this project's executable.
 add_executable (ardrone_test main.cpp video_test.h cuda_test.h staging_test.h atcmd_test.h wifi_test.h)
 
 if(NOT WIN32)
-	set( LINK_FS stdc++fs)
+	set( LINK_FS stdc++fs pthread)
 endif ()
 
 # Ajoute le lien a ma librairie
-target_link_libraries (ardrone_test libardrone Qt5::Network ${OpenCV_LIBS} ${LINK_FS} ${LIBAV_LIBS}) 
+target_link_libraries (ardrone_test libardrone Qt5::Network ${OpenCV_LIBS} ${LINK_FS} ${LIBAV_LIBS} ) 
 

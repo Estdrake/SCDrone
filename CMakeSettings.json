@@ -9,7 +9,7 @@
       ],
       "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
       "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
-      "cmakeCommandArgs": "-DQt5Network_DIR=D:\\VC17_LIB\\qt\\lib\\cmake\\Qt5Network -DTCLAP_INCLUDE_DIR=D:\\VC17_LIB\\tclap\\include -DLIBAV_INCLUDE_DIR=D:\\VC17_LIB\\ffmpeg\\include -DLIBAV_LIBRARY_DIR=D:\\VC17_LIB\\ffmpeg\\lib",
+      "cmakeCommandArgs": "-DTCLAP_INCLUDE_DIR=D:\\VC17_LIB\\tclap\\include -DLIBAV_INCLUDE_DIR=D:\\VC17_LIB\\ffmpeg\\include -DLIBAV_LIBRARY_DIR=D:\\VC17_LIB\\ffmpeg\\lib",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": ""
     }

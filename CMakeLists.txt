@@ -14,6 +14,11 @@ set( LIBAV_LIBRARY_DIR "" CACHE PATH "The path containing avcodec.a or avcodec.l
 
 enable_testing()
 
+if(CMAKE_BUILD_TYPE EQUAL "DEBUG")
+endif()
+
+#add_definitions(-DDEBUG_VIDEO_CLIENT)
+
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 find_package( OpenCV REQUIRED)
 find_package( Qt5Network REQUIRED)

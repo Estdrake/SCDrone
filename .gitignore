@@ -3,3 +3,6 @@
 build/
 *.swp
 CMakeSettings.json
+cmake-*
+.idea/
+CMakeSettings.json

@@ -124,7 +124,10 @@ inline void parseVideoStreamDump(fs::path folder, int nbrFile, bool to_stream = 
 						// Écrit le stream vers un fichier
 						ofstream of(f, ofstream::binary | ofstream::out);
 						of.seekp(0);
-						of.write((char*)vfBuffer, ve.payload_size);
+						unsigned char* bb = new unsigned char[ve.payload_size + ve.header_size];
+						memcpy(bb, &ve, sizeof(video_encapsulation_t));
+						memcpy(bb + sizeof(video_encapsulation_t), vfBuffer, ve.payload_size);
+						of.write((char*)bb, ve.payload_size + ve.header_size);
 						of.close();
 					}
 				}
@@ -132,7 +135,7 @@ inline void parseVideoStreamDump(fs::path folder, int nbrFile, bool to_stream = 
 		}
 		else {
 			memcpy(&ve, buffer, sizeof(video_encapsulation_t));
-			printVideoStreamDump(&ve);
+			print_video_stream_dump(&ve);
 			std::cout << "Payload size is " << ve.payload_size << std::endl;
 			// Crée mon buffer pour recevoir le payload
 			vfBuffer = new unsigned char[ve.payload_size];
@@ -160,7 +163,11 @@ inline void parseVideoStreamDump(fs::path folder, int nbrFile, bool to_stream = 
 					// Écrit le stream vers un fichier
 					ofstream of(f, ofstream::binary | ofstream::out);
 					of.seekp(0);
-					of.write((char*)vfBuffer, ve.payload_size);
+					// Ma refaire un buffer pour le header + le full payload
+					unsigned char* bb = new unsigned char[ve.payload_size + ve.header_size];
+					memcpy(bb, &ve, sizeof(video_encapsulation_t));
+					memcpy(bb + ve.header_size, vfBuffer, ve.payload_size);
+					of.write((char*)bb, ve.payload_size+ve.header_size);
 					of.close();
 				}
 			}
@@ -186,11 +193,31 @@ inline void parse_video_packet_raw_file(fs::path folder,int nbr_trame)
 
 inline void execute_video_test(fs::path folder, int nbrTrame, bool onlyParse = false ,int bufferSize = STREAM_SIZE) {
 
-	stream = new unsigned char[bufferSize];
-	if (!onlyParse) {
-		TestTcp t;
-		t.Connect(nbrTrame, folder);
+	parseVideoStreamDump(folder, 4, false);
+
+	VFQueue		queue;
+	VideoClient client(&queue);
+
+	VideoFrame	vf;
+
+
+	thread t = client.start();
+
+	for (;;)
+	{
+		std::cout << "Starting to wait for video frame" << std::endl;
+
+		vf = queue.pop();
+		std::cout << "Got video frame saving to file" << std::endl;
+
+		fs::path f = folder / (std::to_string(vf.Header.frame_number) + ".bin");
+
+		ofstream of(f, ofstream::binary | ofstream::out);
+		of.seekp(0);
+		of.write((char*)vf.Data, vf.Got);
+		of.close();
+		delete[] vf.Data;
 	}
-	parseVideoStreamDump(folder, nbrTrame);
-	delete[] stream;
+
+	//t.join();
 }

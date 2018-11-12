@@ -2,6 +2,7 @@
 
 #include <tclap/CmdLine.h>
 #include "build_info.h"
+#include "thread_test.h"
 #include "video_test.h"
 #include "cuda_test.h"
 #include "staging_test.h"
@@ -15,7 +16,7 @@ using namespace std;
 int main(int argv, char ** argc )
 {
 
-	bool run_video_test = false, run_cuda_test = false, run_staging_test = false, run_wifi_test = false, run_raw_convert = false;
+	bool run_video_test = false, run_cuda_test = false, run_staging_test = false, run_wifi_test = false, run_raw_convert = false, run_thread_test = false;
 	
 	fs::path folder;
 
@@ -36,6 +37,7 @@ int main(int argv, char ** argc )
 		TCLAP::SwitchArg staging_test_arg("s", "staging_test", "Run staging test", cmd, false);
 		TCLAP::SwitchArg test_wifi_arg("w", "wifi_test", "Run wifi test with drone", cmd, false);
 		TCLAP::SwitchArg convert_frame_arg("r", "raw", "Extract the saved frame to raw frame", cmd, false);
+		TCLAP::SwitchArg thread_test_arg("t", "thread", "Effectue le test des threads",cmd,false);
 
 
 		cmd.parse(argv, argc);
@@ -44,6 +46,7 @@ int main(int argv, char ** argc )
 		run_staging_test = staging_test_arg.getValue();
 		run_wifi_test = test_wifi_arg.getValue();
 		run_raw_convert = convert_frame_arg.getValue();
+		run_thread_test = thread_test_arg.getValue();
 		folder = folder_arg.getValue();
 		nbr_trame = nbr_trame_arg.getValue();
 
@@ -67,6 +70,8 @@ int main(int argv, char ** argc )
 		execute_staging_test(folder,nbr_trame);
 	if (run_wifi_test)
 		execute_wifi_test();
+	if (run_thread_test)
+		execute_thread_test();
 		
 
 	return 0;
