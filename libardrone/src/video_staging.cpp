@@ -6,8 +6,10 @@ VideoStaging::VideoStaging(VFQueue* queue)
 	this->queue = queue;
 	this->have_received = false;
 
+	av_register_all();
 	avcodec_register_all();
-	av_log_set_level(AV_LOG_DEBUG);
+	avformat_network_init();
+	av_log_set_level(AV_LOG_TRACE);
 
 	const AVCodecID codec_id = AV_CODEC_ID_H264;
 	codec = avcodec_find_encoder(codec_id);
@@ -16,29 +18,37 @@ VideoStaging::VideoStaging(VFQueue* queue)
 		// echer de recuperation du codec devrait pas arriver
 	}
 
+	format_ctx = avformat_alloc_context();
+	format_ctx->flags = AVFMT_NOFILE;
+
 	format = AV_PIX_FMT_BGR24;
-	bit_rate = 1000000;
+	bit_rate = 1200;
 	display_width = 640;
 	display_height = 360;
 	fps = 24;
 
 	codec_ctx = avcodec_alloc_context3(codec);
+	if(!codec_ctx)
+	{
+		return;
+	}
 
+	avcodec_get_context_defaults3(codec_ctx, codec);
 	codec_ctx->bit_rate = bit_rate;
 	codec_ctx->width = display_width;
 	codec_ctx->height = display_height;
 	codec_ctx->time_base = { 1,fps };
 	codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
 	codec_ctx->skip_frame = AVDISCARD_DEFAULT;
-//	codec_ctx->error_concealment = FF_EC_GUESS_MVS | FF_EC_DEBLOCK;
-//	codec_ctx->skip_loop_filter = AVDISCARD_DEFAULT;
+	codec_ctx->error_concealment = FF_EC_GUESS_MVS | FF_EC_DEBLOCK;
+	codec_ctx->skip_loop_filter = AVDISCARD_DEFAULT;
 	codec_ctx->workaround_bugs = FF_BUG_AUTODETECT;
 	codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
 	codec_ctx->codec_id = AV_CODEC_ID_H264;
-//	codec_ctx->skip_idct = AVDISCARD_DEFAULT;
+ 	codec_ctx->skip_idct = AVDISCARD_DEFAULT;
 
 	// Enfaire devrait peux etre mettre l'option fast si on n'a besoin de vitesse
-	//av_opt_set(codec_context->priv_data, "preset", "slow", 0);
+	av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
 
 	frame_output = av_frame_alloc();
 	frame = av_frame_alloc();
@@ -50,6 +60,7 @@ VideoStaging::VideoStaging(VFQueue* queue)
 
 VideoStaging::~VideoStaging()
 {
+	
 }
 
 int VideoStaging::init() const
@@ -89,19 +100,28 @@ void VideoStaging::on_new_frame(VideoFrame vf)
 {
 	int frameFinish;
 	AVPacket packet;
-	if(only_idr && (vf.Header.frame_type == FRAME_TYPE_IDR_FRAME || vf.Header.frame_type == FRAME_TYPE_I_FRAME ))
+	av_init_packet(&packet);
+	if(only_idr && (vf.Header.frame_type == FRAME_TYPE_IDR_FRAME || vf.Header.frame_type == FRAME_TYPE_I_FRAME || vf.Header.frame_type == FRAME_TYPE_P_FRAME))
 	{
 		std::cout << "Im a " + std::to_string(vf.Header.frame_type) << std::endl;
+		packet.pts = AV_NOPTS_VALUE;
+		packet.dts = AV_NOPTS_VALUE;
 		packet.data = vf.Data;
 		packet.size = vf.Header.payload_size;
+		packet.dts = vf.Header.timestamp;
 
-		int i = avcodec_send_packet(codec_ctx, &packet);
+		int i = avcodec_decode_video2(codec_ctx, frame_output, &frameFinish, &packet);
 		if(i < 0)
 		{
 			char* d = new char[1024];
 			d = av_make_error_string(d, 1024, i);
-			std::cout << i << endl;
+			std::cout << d << endl;
 			delete[] d;
+		}
+		if(i >= 0 && frameFinish)
+		{
+			return;
+			
 		}
 
 	} 

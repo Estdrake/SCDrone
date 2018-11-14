@@ -2,7 +2,10 @@
 
 #include <video_client.h>
 
-
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/video.hpp>
+#include <opencv2/videoio.hpp>
 
 class TestTcp : public QObject {
 	//Q_OBJECT
@@ -193,7 +196,7 @@ inline void parse_video_packet_raw_file(fs::path folder,int nbr_trame)
 
 inline void execute_video_test(fs::path folder, int nbrTrame, bool onlyParse = false ,int bufferSize = STREAM_SIZE) {
 
-	parseVideoStreamDump(folder, 4, false);
+	//parseVideoStreamDump(folder, 4, false);
 
 	VFQueue		queue;
 	VideoClient client(&queue);
@@ -203,21 +206,24 @@ inline void execute_video_test(fs::path folder, int nbrTrame, bool onlyParse = f
 
 	thread t = client.start();
 
-	for (;;)
-	{
-		std::cout << "Starting to wait for video frame" << std::endl;
-
-		vf = queue.pop();
-		std::cout << "Got video frame saving to file" << std::endl;
-
-		fs::path f = folder / (std::to_string(vf.Header.frame_number) + ".bin");
-
+	fs::path f = folder / "stream.264";
+	thread t2 = std::thread([&] {
 		ofstream of(f, ofstream::binary | ofstream::out);
-		of.seekp(0);
-		of.write((char*)vf.Data, vf.Got);
-		of.close();
-		delete[] vf.Data;
-	}
+		int length = 0;
+		std::cout << "Starting to wait for video frame" << std::endl;
+		for (int i = 0; i < 1000; i++)
+		{
 
+			vf = queue.pop();
+			std::cout << "Got frame id " << vf.Header.frame_number << std::endl;
+			of.seekp(length);
+			of.write((char*)vf.Data, vf.Header.payload_size);
+			length += vf.Header.payload_size;
+			delete[] vf.Data;
+		}
+
+		of.close();
+	});
+	t2.join();
 	//t.join();
 }

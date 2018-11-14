@@ -32,11 +32,13 @@ class VideoStaging
 	AVCodec*			codec;
 	AVCodecContext*		codec_ctx;
 
+	AVFormatContext*	format_ctx;
+
 	AVFrame*			frame;
 	AVFrame*			frame_output;
-
+	AVPacket*			packet;
 	uint8_t**			buffer_array;
-	uint8_t*			buffer;
+	uint8_t* buffer;
 	int					buffer_size;
 
 	int					line_size;

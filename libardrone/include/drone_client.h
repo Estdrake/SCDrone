@@ -14,4 +14,10 @@ class drone_client {
 };
 
 
+class drone_application
+{
+	
+};
+
+
 #endif // _DRONE_CLIENT_H_
