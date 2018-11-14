@@ -1,39 +1,58 @@
 #include "video_staging.h"
 #include <iostream>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/highgui.hpp>
 
-VideoStaging::VideoStaging(VFQueue* queue)
+
+uint8_t PADDING[AV_INPUT_BUFFER_PADDING_SIZE]{ 0 };
+
+
+void log_callback(void* ptr, int level, const char* fmt, va_list vargs)
 {
-	this->queue = queue;
-	this->have_received = false;
+	
+	
+}
 
-	av_register_all();
+VideoStaging::VideoStaging(VFQueue* queue, MQueue* mqueue) : of()
+{
 	avcodec_register_all();
-	avformat_network_init();
-	av_log_set_level(AV_LOG_TRACE);
+	this->queue = queue;
+	this->mqueue = mqueue;
+	this->have_received = false;
+	this->buffer_size = H264_INBUF_SIZE;
+	this->line_size = 0;
+	this->first_frame = 0;
+	this->last_frame = 0;
+
+	av_log_set_level(AV_LOG_VERBOSE);
 
 	const AVCodecID codec_id = AV_CODEC_ID_H264;
-	codec = avcodec_find_encoder(codec_id);
+	codec = avcodec_find_decoder(codec_id);
 	if (nullptr == codec)
 	{
 		// echer de recuperation du codec devrait pas arriver
 	}
 
-	format_ctx = avformat_alloc_context();
-	format_ctx->flags = AVFMT_NOFILE;
-
-	format = AV_PIX_FMT_BGR24;
+	format_in = AV_PIX_FMT_YUV420P;
+	format_out = AV_PIX_FMT_BGR24;
 	bit_rate = 1200;
 	display_width = 640;
 	display_height = 360;
 	fps = 24;
 
 	codec_ctx = avcodec_alloc_context3(codec);
-	if(!codec_ctx)
+	if (!codec_ctx)
 	{
+		// devrait jamais arriver
 		return;
 	}
-
 	avcodec_get_context_defaults3(codec_ctx, codec);
+
+	if(codec->capabilities & AV_CODEC_CAP_TRUNCATED)
+	{
+		codec_ctx->flags |= AV_CODEC_FLAG_TRUNCATED;
+	}
+
 	codec_ctx->bit_rate = bit_rate;
 	codec_ctx->width = display_width;
 	codec_ctx->height = display_height;
@@ -45,22 +64,64 @@ VideoStaging::VideoStaging(VFQueue* queue)
 	codec_ctx->workaround_bugs = FF_BUG_AUTODETECT;
 	codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
 	codec_ctx->codec_id = AV_CODEC_ID_H264;
- 	codec_ctx->skip_idct = AVDISCARD_DEFAULT;
+	codec_ctx->skip_idct = AVDISCARD_DEFAULT;
 
 	// Enfaire devrait peux etre mettre l'option fast si on n'a besoin de vitesse
-	av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
+	//av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
 
+	codec_parser = av_parser_init(codec_ctx->codec_id);
+	if(codec_parser == nullptr)
+	{
+		// devrait jamais arriver
+		return;
+	}
+
+	packet = av_packet_alloc();
 	frame_output = av_frame_alloc();
 	frame = av_frame_alloc();
 
+	buffer = new uint8_t[H264_INBUF_SIZE];
+	buffer_size = H264_INBUF_SIZE;
+	indice_buffer = 0;
 	buffer_array = (uint8_t**)malloc(sizeof(uint8_t*));
-	buffer = nullptr;
 	img_convert_ctx = nullptr;
 }
 
+/*
+VideoStaging::VideoStaging(VFQueue* queue, const char* filepath) :  VideoStaging(queue,&MQueue())
+{
+	this->record_file = filepath;
+	this->record_to_file_raw = true;
+}
+*/
 VideoStaging::~VideoStaging()
 {
-	
+	if(codec_parser)
+	{
+		av_parser_close(codec_parser);
+		codec_parser = nullptr;
+	}
+	if(codec_ctx)
+	{
+		avcodec_close(codec_ctx);
+		codec_ctx = nullptr;
+	}
+	if(frame)
+	{
+		av_free(frame);
+	}
+	if(frame_output)
+	{
+		av_free(frame_output);
+	}
+	if (img_convert_ctx) {
+		sws_freeContext(img_convert_ctx);
+	}
+	if(of)
+	{
+	}
+	delete buffer_array;
+	delete buffer;
 }
 
 int VideoStaging::init() const
@@ -70,6 +131,10 @@ int VideoStaging::init() const
 	{
 		std::cerr << "Impossible d'ouvrir le codec" << std::endl;
 		return 1;
+	}
+	// Ouvre le fichier 
+	if(record_file)
+	{
 	}
 
 	return 0;
@@ -84,6 +149,7 @@ std::thread VideoStaging::start()
 void VideoStaging::run_service()
 {
 	VideoFrame vf {};
+	indice_buffer = 0;
 	for(;;)
 	{
 		vf = queue->pop();
@@ -92,45 +158,67 @@ void VideoStaging::run_service()
 			init_or_frame_changed(vf, true);
 			have_received = true;
 		}
-		on_new_frame(vf);
+		if(add_frame_buffer(vf))
+		{
+		}
+		if(record_to_file_raw)
+		{
+			append_file(vf);
+		}
 	}
 }
 
-void VideoStaging::on_new_frame(VideoFrame vf)
-{
-	int frameFinish;
-	AVPacket packet;
-	av_init_packet(&packet);
-	if(only_idr && (vf.Header.frame_type == FRAME_TYPE_IDR_FRAME || vf.Header.frame_type == FRAME_TYPE_I_FRAME || vf.Header.frame_type == FRAME_TYPE_P_FRAME))
-	{
-		std::cout << "Im a " + std::to_string(vf.Header.frame_type) << std::endl;
-		packet.pts = AV_NOPTS_VALUE;
-		packet.dts = AV_NOPTS_VALUE;
-		packet.data = vf.Data;
-		packet.size = vf.Header.payload_size;
-		packet.dts = vf.Header.timestamp;
-
-		int i = avcodec_decode_video2(codec_ctx, frame_output, &frameFinish, &packet);
-		if(i < 0)
-		{
-			char* d = new char[1024];
-			d = av_make_error_string(d, 1024, i);
-			std::cout << d << endl;
-			delete[] d;
-		}
-		if(i >= 0 && frameFinish)
-		{
-			return;
-			
-		}
-
-	} 
-
-}
 
 bool VideoStaging::have_frame_changed(const VideoFrame& vf)
 {
 
+	return false;
+}
+
+bool VideoStaging::add_frame_buffer(const VideoFrame& vf)
+{
+	if(vf.Header.payload_size == 0)
+	{
+		return false;
+	}
+
+	if(indice_buffer + vf.Got + AV_INPUT_BUFFER_PADDING_SIZE >= buffer_size)
+	{
+		// buffer pas assez gros pour contenir la nouvelle data flush
+		indice_buffer = 0;
+	}
+	// Copy dans notre buffer le contenue de la trame reçu
+	memcpy(buffer+indice_buffer, vf.Data, vf.Got);
+	indice_buffer += vf.Got;
+
+
+
+	int len = av_parser_parse2(codec_parser, codec_ctx, &packet->data, &packet->size, buffer, indice_buffer, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
+	if(len < 0)
+	{
+		// erreur de parsing pas bon
+		return false;
+	}
+	if(packet->size)
+	{
+		if(avcodec_send_packet(codec_ctx, packet))
+		{
+			int i = avcodec_receive_frame(codec_ctx, frame);
+			if(i == 0)
+			{
+				indice_buffer = 0;
+				cv::Mat m;
+				if (frame_to_mat(frame, m))
+				{
+					// Ajoute a notre queue l'image mat
+					std::cout << "Got new mat for frame" << std::endl;
+					mqueue->push(m);
+				}
+				return true;
+			}
+		}
+	} 
+	
 	return false;
 }
 
@@ -142,14 +230,11 @@ void VideoStaging::init_or_frame_changed(const VideoFrame& vf,bool init)
 	this->display_height = vf.Header.display_height;
 	this->display_width = vf.Header.display_width;
 
-	this->format = codec_ctx->pix_fmt;
-	this->buffer_size = avpicture_get_size(this->format, this->display_width, this->display_height);
-	this->buffer = (uint8_t*)av_realloc(this->buffer, this->buffer_size * sizeof(uint8_t));
+	this->format_in = codec_ctx->pix_fmt;
 
-	avpicture_fill((AVPicture*)frame, this->buffer, this->format, this->display_width, this->display_height);
+	img_convert_ctx = sws_getContext(this->display_width, this->display_height, this->format_in, this->display_width, 
+		this->display_height, this->format_out, SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
 
-//	this->img_convert_ctx = sws_getCachedContext(img_convert_ctx, this->display_width, this->display_height,
-//		this->format, this->display_width, this->display_height,this->format, SWS_FAST_BILINEAR, nullptr,nullptr, nullptr);
 	if(init)
 	{
 		first_frame = vf.Header.frame_number;
@@ -157,7 +242,7 @@ void VideoStaging::init_or_frame_changed(const VideoFrame& vf,bool init)
 	}
 }
 
-void frame_to_mat(const AVFrame* avframe, cv::Mat& m)
+bool VideoStaging::frame_to_mat(const AVFrame* avframe, cv::Mat& m)
 {
 	AVFrame dst;
 
@@ -170,13 +255,10 @@ void frame_to_mat(const AVFrame* avframe, cv::Mat& m)
 
 	avpicture_fill((AVPicture*)&dst, dst.data[0], AV_PIX_FMT_BGR24, w, h);
 
-	struct SwsContext *convert_ctx = NULL;
+	int r = sws_scale(img_convert_ctx, avframe->data, avframe->linesize, 0, h, dst.data, dst.linesize);
+	return true;
+}
 
-	enum AVPixelFormat src_pixfmt = AV_PIX_FMT_BGR24;
-	enum AVPixelFormat dst_pixfmt = AV_PIX_FMT_BGR24;
-
-	convert_ctx = sws_getContext(w, h, src_pixfmt, w, h, dst_pixfmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
-
-	sws_scale(convert_ctx, avframe->data, avframe->linesize, 0, h, dst.data, dst.linesize);
-	sws_freeContext(convert_ctx);
+void VideoStaging::append_file(const VideoFrame& vf)
+{
 }
