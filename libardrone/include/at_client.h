@@ -12,8 +12,8 @@
 #include "at_cmd.h"
 #include <QObject>
 #include <QUdpSocket>
-
-typedef ConcurrentQueue<std::string> ATQueue;
+#include <navdata_common.h>
+typedef ConcurrentQueue<_navdata_demo_t> ATQueue;
 
 class ATClient : public QObject
 {

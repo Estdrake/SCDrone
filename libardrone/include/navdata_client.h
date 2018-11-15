@@ -7,17 +7,28 @@
 #include "thread.h"
 
 #include <iostream>
+#include <thread>
+
+#include <QtCore/QObject>
+#include <QtCore/QDebug>
+#include <QtNetwork/QTcpSocket>
+
+typedef ConcurrentQueue<_navdata_option_t > NAVQueue;
 
 class NavDataClient{
 
     public:
-        NavDataClient();
+        NavDataClient(ConcurrentQueue< _navdata_option_t>* queue);
         ~NavDataClient();
 
-        void run_service();
+		std::thread start();
 
     private:
-
+		ConcurrentQueue<_navdata_option_t>*  queue;
+		QTcpSocket* socket;
+		QByteArray bufferNavData;
+		bool isConected;
+		void run_service();
 };
 
 #endif // _NAVDATA_CLIENT_H_
