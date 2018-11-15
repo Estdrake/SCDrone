@@ -27,3 +27,4 @@ endif ()
 # Ajoute le lien a ma librairie
 target_link_libraries (ardrone_test libardrone Qt5::Network ${OpenCV_LIBS} ${LINK_FS} ${LIBAV_LIBS} ) 
 
+install (TARGETS ardrone_test DESTINATION bin)

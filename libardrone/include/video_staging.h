@@ -23,7 +23,7 @@ extern "C" {
 #define H264_INBUF_SIZE 50000 // Grosseur de mon buffer que j'utilise pour les trames que je recoit
 
 typedef ConcurrentQueue<cv::Mat> MQueue;
-
+typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
 class VideoStaging
 {
 	video_encapsulation_t		prev_encapsulation_ = {}; // Dernier header PaVE reçu
@@ -36,7 +36,13 @@ class VideoStaging
 	int							fps;						// FPS du stream reçu
 
 	unsigned int				num_picture_decoded = 0;	// Nombre d'image decoder depuis le debut du stream
-	long						average_time = 0.0l;		// Temps moyen pour faire le traitement d'une image
+	int							average_time = 0;			// Temps moyen pour faire le traitement d'une image
+
+	TimePoint						start_gap;
+	TimePoint						end_gap;
+	TimePoint						last_start;
+	TimePoint						last_end;
+	std::vector<long>			times;
 
 	AVCodec*					codec;						// Contient les informations du codec qu'on utilise (H264)
 	AVCodecContext*				codec_ctx;					// Contient le context de notre codec ( information sur comment decoder le stream )

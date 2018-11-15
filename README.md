@@ -97,7 +97,3 @@ struct VideoPacket
 Les frames sont de deux type : IDR-Frame ( une frame complète de référence ) et les P-Frame ( frame d'update ) pour notre cas d'utiliation
 nous n'avons pas vraiment besoin de flux vidéo et nous pourrious seulement récuperer les IDR-Frame pour les convertir en cv::Mat.
 
-```
-
-
-

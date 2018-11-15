@@ -44,6 +44,8 @@ public:
 			return;
 		}
 
+		float gaz = 0.0f, roll = 0.0f, yaw = 0.0f, pitch = 0.0f;
+
 		gamepad = new QGamepad(*gamepads.begin(), this);
 		connect(gamepad, &QGamepad::axisLeftXChanged, this, [&](double value) {
 			qDebug() << "Left X" << value;
@@ -63,9 +65,20 @@ public:
 		});
 		connect(gamepad, &QGamepad::buttonAChanged, this, [&](bool pressed) {
 			qDebug() << "Button A" << pressed;
+			if (pressed) {
+				if (yaw < 1.0f) {
+					yaw += 0.1f;
+				}
+			}
 		});
 		connect(gamepad, &QGamepad::buttonBChanged, this, [&](bool pressed) {
 			qDebug() << "Button B" << pressed;
+			if (pressed) {
+				if (yaw > -1.0f) {
+					yaw -= 0.1f;
+				}
+			}
+			queue->push(at_format_pcmd(PROGRESSIVE, roll, pitch, gaz, yaw));
 		});
 		connect(gamepad, &QGamepad::buttonXChanged, this, [&](bool pressed) {
 			qDebug() << "Button X" << pressed;

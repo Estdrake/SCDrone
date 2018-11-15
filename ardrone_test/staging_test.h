@@ -7,6 +7,7 @@
 
 inline void execute_staging_test(const fs::path& folder, int nbr_trame = 40887)
 {
+	cv::namedWindow("Drone video stream");
 	VFQueue queue;
 	MQueue mqueue;
 	VideoStaging vs(&queue, &mqueue);
@@ -18,14 +19,20 @@ inline void execute_staging_test(const fs::path& folder, int nbr_trame = 40887)
 	std::thread st = vs.start();
 	std::thread vt = vc.start();
 
-	//cv::namedWindow("Drone video stream");
-	//for (;;)
-	//{
-	//	cv::Mat m = mqueue.pop();
-	//	cv::imshow("Drone video stream",m);
-	//}
+	//cv::VideoWriter video("output.avi", CV_FOURCC('M', 'J', 'P', 'G'), 10, cv::Size(640, 360));
 
-	vt.join();
-	st.join();
+	for (;;)
+	{
+		cv::Mat m = mqueue.pop2();
+		cv::imshow("Drone video stream", m);
+		//video.write(m);
+		//std::this_thread::sleep_for(20ms);
+		char c = (char)cv::waitKey(1);
+		if (c == 27)
+			break;
+	}
+	//video.release();
+	//vt.join();
+	//st.join();
 }
 #endif

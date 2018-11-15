@@ -12,7 +12,7 @@ include_directories (
 
 
 # Add source to this project's executable.
-add_executable (ardrone_utils main.cpp control.h)
+add_executable (ardrone_utils main.cpp control.h demo_1.h)
 
 if(NOT WIN32)
 	set( LINK_FS stdc++fs pthread)
@@ -20,4 +20,6 @@ endif ()
 
 # Ajoute le lien a ma librairie
 target_link_libraries (ardrone_utils libardrone Qt5::Network Qt5::Gamepad Qt5::Gui ${OpenCV_LIBS} ${LINK_FS} ${LIBAV_LIBS} ) 
+
+install (TARGETS ardrone_utils DESTINATION bin)
 

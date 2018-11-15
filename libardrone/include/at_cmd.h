@@ -18,7 +18,7 @@ static const char* AT_MTRIM = "AT*MTRIM=%d,%d,%d,%d\r";
 static const char* AT_POLL = "AT*POLL=%d,%d,%d,%d,%d,%d\r";
 static const char* AT_PCMD = "AT*PCMD=$seq,%d,%d,%d,%d,%d\r";
 static const char* AT_PCMD_MAG = "AT*PCMD_MAG=%d,%d,%d,%d,%d,%d,%d,%d\r";
-static const char* AT_CONFIG = "AT*CONFIG=%d,\"%s\",\"%s\"\r";
+static const char* AT_CONFIG = "AT*CONFIG=$seq,\"%s\",\"%s\"\r";
 static const char* AT_CONFIG_IDS = "AT*CONFIG_IDS=%d,\"%s\",\"%s\",\"%s\"\r";
 static const char* AT_CTRL = "AT*CTRL=$seq,%d,%d\r";
 static const char* AT_COMWDG = "AT*COMWDG=%d\r";
@@ -67,5 +67,9 @@ inline std::string at_format_pcmd(int flag, float roll, float pitch, float gaz, 
 inline std::string at_format_controlinit()
 {
 	return string_format(AT_CTRL, 0);
+}
+
+inline std::string at_format_config(std::string key, std::string value) {
+	return string_format(AT_CONFIG, key.c_str(), value.c_str());
 }
 #endif

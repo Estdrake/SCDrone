@@ -87,13 +87,7 @@ VideoStaging::VideoStaging(VFQueue* queue, MQueue* mqueue) : of()
 	img_convert_ctx = nullptr;
 }
 
-/*
-VideoStaging::VideoStaging(VFQueue* queue, const char* filepath) :  VideoStaging(queue,&MQueue())
-{
-	this->record_file = filepath;
-	this->record_to_file_raw = true;
-}
-*/
+
 VideoStaging::~VideoStaging()
 {
 	if(codec_parser)
@@ -153,6 +147,7 @@ void VideoStaging::run_service()
 	for(;;)
 	{
 		vf = queue->pop();
+		last_start = std::chrono::high_resolution_clock::now();
 		if(!have_received)
 		{
 			init_or_frame_changed(vf, true);
@@ -210,8 +205,6 @@ bool VideoStaging::add_frame_buffer(const VideoFrame& vf)
 				cv::Mat m;
 				if (frame_to_mat(frame, m))
 				{
-					// Ajoute a notre queue l'image mat
-					std::cout << "Got new mat for frame" << std::endl;
 					mqueue->push(m);
 				}
 				return true;

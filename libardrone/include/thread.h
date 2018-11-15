@@ -40,6 +40,14 @@ public:
 		return f;
 	}
 
+	dataType pop2() {
+		std::unique_lock<std::mutex> lk(mutex);
+		cv.wait(lk, [this] { return !queue.empty(); }); // Attend que la queue ne soit plus vide et utiliser
+		dataType f = queue.front();
+		queue.pop();
+		return f;
+	}
+
 	dataType pop_wait(std::chrono::milliseconds timeout,bool* has_data)
 	{
 		std::unique_lock<std::mutex> lk(mutex);
