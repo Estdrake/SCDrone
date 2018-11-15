@@ -25,15 +25,10 @@ VideoClient::VideoClient(ConcurrentQueue<VideoFrame>* queue)
 {
 	this->socket = new QTcpSocket(this);
 	this->queue = queue;
+	socket->connectToHost(WIFI_ARDRONE_IP, VIDEO_PORT);
 }
 
 VideoClient::~VideoClient() = default;
-
-std::thread VideoClient::start()
-{
-	socket->connectToHost(WIFI_ARDRONE_IP, VIDEO_PORT);
-	return std::thread([this] { this->run_service();  });
-}
 
 void VideoClient::run_service() {
 	QByteArray readBuffer;
@@ -44,9 +39,14 @@ void VideoClient::run_service() {
 
 
 	if (socket->waitForConnected(3000)) {
-		for (;;) {
+		while (stopRequested() == false) {
 			if (socket->waitForReadyRead()) {
-				readBuffer = socket->readAll();
+				if (socket->bytesAvailable() > 0) {
+					readBuffer = socket->readAll();
+				}
+				else {
+					continue;
+				}
 				int length = readBuffer.length();
 				bool endFrame = false;
 				// Regarde si le buffer commence par PaVE se qui indique qu'on na une nouvelle trame
@@ -107,6 +107,7 @@ void VideoClient::run_service() {
 				qDebug() << "Fail to get data within 3 second";
 			}
 		}
+		qDebug() << "Stopping video client";
 	}
 	else {
 		// Fail de la connection doit envoyer un signal a quelqun ou restart plusieurs fois en boucle

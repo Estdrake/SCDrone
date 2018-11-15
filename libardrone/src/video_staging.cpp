@@ -4,17 +4,18 @@
 #include <opencv2/highgui.hpp>
 
 
+typedef std::chrono::high_resolution_clock HRClock;
+using namespace std::chrono;
+
 uint8_t PADDING[AV_INPUT_BUFFER_PADDING_SIZE]{ 0 };
 
 
-void log_callback(void* ptr, int level, const char* fmt, va_list vargs)
+VideoStaging::VideoStaging(VFQueue* queue, MQueue* mqueue) : of(), Runnable()
 {
-	
-	
-}
-
-VideoStaging::VideoStaging(VFQueue* queue, MQueue* mqueue) : of()
-{
+#ifdef DEBUG_VIDEO_STAGING
+	start_gap = HRClock::now();
+	qDebug() << "Starting video staging";
+#endif
 	avcodec_register_all();
 	this->queue = queue;
 	this->mqueue = mqueue;
@@ -23,8 +24,11 @@ VideoStaging::VideoStaging(VFQueue* queue, MQueue* mqueue) : of()
 	this->line_size = 0;
 	this->first_frame = 0;
 	this->last_frame = 0;
-
+#ifdef DEBUG_VIDEO_STAGING
 	av_log_set_level(AV_LOG_VERBOSE);
+#else
+	av_log_set_level(AV_LOG_FATAL);
+#endif
 
 	const AVCodecID codec_id = AV_CODEC_ID_H264;
 	codec = avcodec_find_decoder(codec_id);
@@ -85,6 +89,8 @@ VideoStaging::VideoStaging(VFQueue* queue, MQueue* mqueue) : of()
 	indice_buffer = 0;
 	buffer_array = (uint8_t**)malloc(sizeof(uint8_t*));
 	img_convert_ctx = nullptr;
+
+
 }
 
 
@@ -130,24 +136,31 @@ int VideoStaging::init() const
 	if(record_file)
 	{
 	}
+#ifdef DEBUG_VIDEO_STAGING
+	auto end = HRClock::now();
+	qDebug() << "End video staging initialization : " << duration_cast<milliseconds>(end-start_gap).count() << "ms";
+#endif
 
 	return 0;
 
 }
-
-std::thread VideoStaging::start()
-{
-	return std::thread([this] { this->run_service(); });
-}
-
 void VideoStaging::run_service()
 {
 	VideoFrame vf {};
 	indice_buffer = 0;
-	for(;;)
+	bool has_data = false;
+	while(stopRequested() == false)
 	{
-		vf = queue->pop();
+		vf = queue->pop_wait(100ms, &has_data);
+		if (!has_data)
+			continue;
+#ifdef DEBUG_VIDEO_STAGING
+		if (last_frame != 0 && last_frame + 1 != vf.Header.frame_number) { // on n'a manquer des frames
+			qDebug() << "We have lose " << (vf.Header.frame_number - last_frame) << " frames on staging";
+		}
+		last_frame = vf.Header.frame_number;
 		last_start = std::chrono::high_resolution_clock::now();
+#endif
 		if(!have_received)
 		{
 			init_or_frame_changed(vf, true);
@@ -156,11 +169,21 @@ void VideoStaging::run_service()
 		if(add_frame_buffer(vf))
 		{
 		}
+#ifdef DEBUG_VIDEO_STAGING
+		last_end = HRClock::now();
+		times.push_back((duration_cast<milliseconds>(last_end - start_gap)).count());
+		if (times.size() == 1000) {
+			auto v = std::accumulate(times.begin(), times.end(), 0.0) / times.size();
+			qDebug() << "Average time for 1000 frame " << v;
+			times.clear();
+		}
+#endif
 		if(record_to_file_raw)
 		{
 			append_file(vf);
 		}
 	}
+	std::cout << "Video stagging has been stop" << std::endl;
 }
 
 

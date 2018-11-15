@@ -6,10 +6,14 @@
 #include <thread>
 #include <queue>
 #include <chrono>
+#include <future>
 #include <condition_variable>
 #include <qstring.h>
 #include "video_common.h"
 #include <iostream>
+
+using namespace std;
+using namespace std::chrono;
 
 
 enum ar_drone_workers {
@@ -17,6 +21,40 @@ enum ar_drone_workers {
 	NAVDATA_WORKER,
 	AT_WORKER,
 	CONFIG_WORKER
+};
+
+class Runnable {
+	std::promise<void> exitSignal;
+	std::future<void> futureObject;
+
+public:
+	Runnable() :futureObject(exitSignal.get_future()) {}
+	Runnable(Runnable && obj) : exitSignal(std::move(obj.exitSignal)), futureObject(std::move(obj.futureObject)) {
+		std::cout << "Move Constructor called" << std::endl;
+	}
+	Runnable & operator=(Runnable && obj) {
+		std::cout << "Move assignment is called" << std::endl;
+		exitSignal = std::move(obj.exitSignal);
+		futureObject = std::move(obj.futureObject);
+		return *this;
+	}
+
+	// les classes enfants doivent donné une définition
+	virtual void run_service() = 0;
+
+	// La fonction thread a executer
+	inline std::thread start() {
+		return std::thread([this] { this->run_service(); });
+	}
+
+	inline bool stopRequested() {
+		return !(futureObject.wait_for(0ms) == std::future_status::timeout);
+	}
+
+	inline void stop() {
+		exitSignal.set_value();
+	}
+
 };
 
 template<typename dataType>

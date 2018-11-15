@@ -24,7 +24,7 @@ extern "C" {
 
 typedef ConcurrentQueue<cv::Mat> MQueue;
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
-class VideoStaging
+class VideoStaging : public Runnable
 {
 	video_encapsulation_t		prev_encapsulation_ = {}; // Dernier header PaVE reçu
 
@@ -37,13 +37,13 @@ class VideoStaging
 
 	unsigned int				num_picture_decoded = 0;	// Nombre d'image decoder depuis le debut du stream
 	int							average_time = 0;			// Temps moyen pour faire le traitement d'une image
-
+#ifdef DEBUG_VIDEO_STAGING
 	TimePoint						start_gap;
 	TimePoint						end_gap;
 	TimePoint						last_start;
 	TimePoint						last_end;
 	std::vector<long>			times;
-
+#endif
 	AVCodec*					codec;						// Contient les informations du codec qu'on utilise (H264)
 	AVCodecContext*				codec_ctx;					// Contient le context de notre codec ( information sur comment decoder le stream )
 	AVCodecParserContext*		codec_parser;				// Contient le context sur comment parser les frame de notre stream
@@ -81,12 +81,10 @@ public:
 
 	int	init() const;
 
-	std::thread start();
-
+	void run_service();
 
 private:
 
-	void run_service();
 	bool have_frame_changed(const VideoFrame& vf);
 	bool add_frame_buffer(const VideoFrame& vf);
 	void init_or_frame_changed(const VideoFrame& vf,bool init = false);

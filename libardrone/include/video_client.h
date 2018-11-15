@@ -12,14 +12,13 @@
 
 typedef ConcurrentQueue<VideoFrame> VFQueue;
 
-class VideoClient : QObject {
+class VideoClient : QObject, public Runnable {
 	
 public:
 	VideoClient(ConcurrentQueue<VideoFrame>* queue);
 	~VideoClient();
 
-	std::thread start();
-
+	void run_service();
 private:
 	ConcurrentQueue<VideoFrame>*		queue;
 	QTcpSocket* socket;
@@ -28,9 +27,6 @@ private:
 	
 	// Indique si on n'est courrament connecter async avec le drone
 	bool		isConected;
-
-	
-	void run_service();
 };
 
 void print_video_stream_dump(video_encapsulation_t* PaVE);
