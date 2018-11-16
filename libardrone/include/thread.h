@@ -43,15 +43,16 @@ public:
 	virtual void run_service() = 0;
 
 	// La fonction thread a executer
-	inline std::thread start() {
+	std::thread start() {
 		return std::thread([this] { this->run_service(); });
 	}
 
-	inline bool stopRequested() {
+	bool stopRequested() const
+	{
 		return !(futureObject.wait_for(0ms) == std::future_status::timeout);
 	}
 
-	inline void stop() {
+	void stop() {
 		exitSignal.set_value();
 	}
 
@@ -125,6 +126,16 @@ public:
 		queue.push(data);
 		lk.unlock();
 		cv.notify_one();
+	}
+
+	void empty()
+	{
+		std::unique_lock<std::mutex> lk(mutex);
+		for(int i = 0; i < queue.size(); i++)
+		{
+			queue.pop();
+		}
+		lk.unlock();
 	}
 
 	bool isEmpty() {

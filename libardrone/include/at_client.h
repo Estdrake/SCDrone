@@ -13,9 +13,10 @@
 #include <QObject>
 #include <QUdpSocket>
 #include <navdata_common.h>
-typedef ConcurrentQueue<_navdata_demo_t> ATQueue;
 
-class ATClient : public QObject
+typedef ConcurrentQueue<std::string> ATQueue;
+
+class ATClient : public QObject, public Runnable
 {
 	ATQueue* queue;
 	//ATQueue* config_queue;
@@ -32,8 +33,6 @@ public:
 	ATClient(ATQueue* queue,QObject* parent = 0);
 	~ATClient();
 
-	std::thread start();
-
 	void set_ref(ref_flags f);
 
 
@@ -44,5 +43,46 @@ private slots:
 	void on_read_ready();
 };
 
+enum x_direction
+{
+	LEFT,
+	RIGHT
+};
+
+enum y_direction
+{
+	HIGHER,
+	LOWER
+};
+
+enum z_direction
+{
+	FORWARD,
+	BACKWARD
+};
+
+class DroneControl
+{
+	ATQueue* queue;
+	std::promise<void>	exitSignal;
+	std::future<void>	futureObj;
+
+	milliseconds		interval_msg{};
+
+public:
+	DroneControl(ATQueue* queue);
+
+	void rotate(x_direction, float speed);
+	void move_x(x_direction, float speed);
+	void move_y(y_direction, float speed);
+	void move_z(z_direction, float speed);
+
+	void set_interval(milliseconds ms) const;
+
+	bool wait_for(milliseconds ms) const;
+	void stop();
+private:
+	void stop_current();
+};
 
 #endif

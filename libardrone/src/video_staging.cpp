@@ -172,9 +172,9 @@ void VideoStaging::run_service()
 #ifdef DEBUG_VIDEO_STAGING
 		last_end = HRClock::now();
 		times.push_back((duration_cast<milliseconds>(last_end - start_gap)).count());
-		if (times.size() == 1000) {
+		if (times.size() == 100) {
 			auto v = std::accumulate(times.begin(), times.end(), 0.0) / times.size();
-			qDebug() << "Average time for 1000 frame " << v;
+			qDebug() << "Average time for 100 frame " << v;
 			times.clear();
 		}
 #endif

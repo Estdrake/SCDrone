@@ -5,13 +5,10 @@
 #include "video_staging.h"
 #include "at_client.h"
 
-#include <future>
-
 
 
 inline void execute_staging_test(const fs::path& folder, int nbr_trame = 40887)
 {
-	cv::namedWindow("Drone video stream");
 	VFQueue queue;
 	MQueue mqueue;
 	ATQueue atqueue;
@@ -33,17 +30,33 @@ inline void execute_staging_test(const fs::path& folder, int nbr_trame = 40887)
 	{
 		cv::Mat m = mqueue.pop2();
 		cv::imshow("Drone video stream", m);
-		//video.write(m);
-		//std::this_thread::sleep_for(20ms);
-		char c = (char)cv::waitKey(1);
+
+		char c = static_cast<char>(cv::waitKey(1));
+		
 		if (c == 27)
 			break;
+		switch(c)
+		{
+		case 'w': // vers l'avant
+			break; 
+		case 'a': // vers gauche
+			break;;
+		case 's': // vers arrière
+			break;
+		case 'd': // vers droit
+			break;;
+		case 'k': // moins gaz
+			break;
+		case 'l': // plus gaz
+			break;
+		default:
+			break;
+		}
 	}
 	atclient.set_ref(LAND_FLAG);
 	std::this_thread::sleep_for(1s);
 	atclient.set_ref(LAND_FLAG);
 	std::this_thread::sleep_for(1s);
-	atqueue.push("@");
 	vc.stop();
 	vs.stop();
 	//video.release();

@@ -1,23 +1,45 @@
-#ifndef _DRONE_CLIENT_H_
-#define _DRONE_CLIENT_H_
+#ifndef DRONE_CLIENT_H
+#define DRONE_CLIENT_H
 
-class drone_client {
+#include "at_client.h"
+#include "video_client.h"
+#include "video_staging.h"
+#include "navdata_client.h"
 
-	private:
-		const char*		applicationID;
-		const char*		userID;
-		const char*		sessionID;
+/**
+ * \brief DroneClient is the mother class to create a application with the ARDrone
+ */
+class DroneClient {
+protected:
+	~DroneClient() = default;
 
+	VFQueue				vf_queue;
+	MQueue				mat_queue;
+	ATQueue				at_queue;
+	NAVQueue			nav_queue;
 
-		
+	VideoStaging		video_staging;	
+	VideoClient			video_client;
+	ATClient			at_client;
+	DroneControl		control;
+private:
+	std::thread			vs_thread;
+	std::thread			vc_thread;
+	std::thread			at_thread;
+
+public:
+	DroneClient();
+
+	int Start();
+
+	virtual void mainLoop() = 0;
+private:
+
+	int init();
+	int stop();
 
 };
 
-
-class drone_application
-{
-	
-};
 
 
 #endif // _DRONE_CLIENT_H_

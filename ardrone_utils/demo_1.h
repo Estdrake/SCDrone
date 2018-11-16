@@ -24,60 +24,89 @@ void execute_demo_1()
 	
 	VideoStaging vs(&queue, &mqueue);
 	VideoClient vc(&queue);
+	ATClient atc(&atqueue);
+	DroneControl control(&atqueue);
 	if (int ret = vs.init(); ret > 0)
 	{
 		std::cerr << "Error during video staging init " << ret << endl;
 		return;
 	}
-	ATClient atc(&atqueue);
 	std::thread at = atc.start();
 	std::thread st = vs.start();
-
 	std::thread vt = vc.start();
-	//atqueue.push(at_format_config("general:navdata_demo", "TRUE"));
-	atc.set_ref(EMERGENCY_FLAG);
-	atc.set_ref(TAKEOFF_FLAG);
-	std::cout << "Set takeoff flag" << std::endl;
-	int state = 0;
-	int v = 0;
-	for(;;)
+	std::cout << "All thread are started" << std::endl;
+
+	cv::Mat m;
+
+	const char* wname = "Drone video stream";
+	cv::namedWindow(wname);
+
+	float speed = 0.4f;
+
+	for (;;)
 	{
-		cv::Mat m = mqueue.pop2();
-		cv::imshow("Drone video stream", m);
-		char c = (char)cv::waitKey(1);
+		m = mqueue.pop2();
+		cv::imshow(wname, m);
+
+		char c = static_cast<char>(cv::waitKey(0));
+		std::cout << c << std::endl;
 		if (c == 27)
 			break;
-		if(state == 0)
+		switch (c)
 		{
-			atqueue.push(at_format_pcmd(HOVERING, 0, 0, 0, 0));
-		} else if (state == 1)
-		{
-			atqueue.push(at_format_pcmd(HOVERING, 0, 0, 0, 0.5));
+		case 13: // Enter: decoller
+			std::cout << "Take-off" << std::endl;
+			atc.set_ref(TAKEOFF_FLAG);
+			break;
+		case 8: // Backspace: fait atterir 
+			std::cout << "Landing" << std::endl;
+			atc.set_ref(LAND_FLAG);
+			break;
+		case 9: // Tab: arrete deplacement 
+			std::cout << "Stopping" << std::endl;
+			control.stop();
+			break;
+		case 'w': // vers l'avant
+			control.move_z(FORWARD, speed);
+			break;
+		case 'a': // vers gauche
+			control.move_x(LEFT, speed);
+			break;;
+		case 's': // vers arrière
+			control.move_z(BACKWARD, speed);
+			break;
+		case 'd': // vers droit
+			control.move_x(RIGHT, speed);
+			break;;
+		case 'k': // moins gaz
+			control.move_y(LOWER, speed);
+			break;
+		case 'l': // plus gaz
+			control.move_y(HIGHER, speed);
+			break;
+		case '1': // descend la vitesse
+			if (speed > 0)
+				speed -= 0.1f;
+			break;
+		case '2': // augmente la vitess
+			if (speed < 1.0f)
+				speed += 0.1f;
+			break;
+		default:
+			break;
 		}
-		v++;
-		if (v == 3000000)
-		{
-			if(state == 1)
-			{
-				break;
-			}
-			state = 1;
-			v = 0;
-		}
-			return;
 	}
+	cv::destroyAllWindows();
+	atc.set_ref(LAND_FLAG);
+	std::this_thread::sleep_for(100ms);
 
-	std::this_thread::sleep_for(3s);
-	std::cout << "Stop spinning";
-	std::this_thread::sleep_for(2s);
-	atc.set_ref(LAND_FLAG);
-	std::this_thread::sleep_for(100ms);
-	atc.set_ref(LAND_FLAG);
-	std::this_thread::sleep_for(100ms);
-	atqueue.push("@");
+	vs.stop();
+	vc.stop();
+	atc.stop();
+
+	st.join();
+	vt.join();
 	at.join();
-
-
 
 }
 

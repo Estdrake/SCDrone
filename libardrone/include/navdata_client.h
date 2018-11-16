@@ -13,18 +13,18 @@
 #include <QtCore/QDebug>
 #include <QtNetwork/QTcpSocket>
 
-typedef ConcurrentQueue<_navdata_option_t > NAVQueue;
+typedef ConcurrentQueue<_navdata_option_t> NAVQueue;
 
 class NavDataClient{
 
     public:
-        NavDataClient(ConcurrentQueue< _navdata_option_t>* queue);
+        NavDataClient(NAVQueue* queue);
         ~NavDataClient();
 
 		std::thread start();
 
     private:
-		ConcurrentQueue<_navdata_option_t>*  queue;
+		NAVQueue*  queue;
 		QTcpSocket* socket;
 		QByteArray bufferNavData;
 		bool isConected;

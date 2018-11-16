@@ -46,5 +46,6 @@ set ( LIBAV_LIBS avcodec avutil avformat swscale)
 add_subdirectory("libardrone")
 add_subdirectory("libcontrol")
 add_subdirectory("ardrone_utils")
-add_subdirectory ("ardrone_test")
+add_subdirectory("ardrone_test")
+add_subdirectory("ardrone_keyboard")
 
