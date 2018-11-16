@@ -87,6 +87,19 @@ public:
 		return f;
 	}
 
+	dataType pop2_wait(std::chrono::milliseconds timeout, bool* has_data) {
+		std::unique_lock<std::mutex> lk(mutex);
+		if (!cv.wait_for(lk, timeout, [this] { return !queue.empty(); }))
+		{
+			*has_data = false;
+			return dataType();
+		}
+		*has_data = true;
+		dataType f = queue.front();
+		queue.pop();
+		return f;
+	}
+
 	dataType pop_wait(std::chrono::milliseconds timeout,bool* has_data)
 	{
 		std::unique_lock<std::mutex> lk(mutex);

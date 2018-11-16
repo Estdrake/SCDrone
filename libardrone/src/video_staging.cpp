@@ -39,10 +39,10 @@ VideoStaging::VideoStaging(VFQueue* queue, MQueue* mqueue) : of(), Runnable()
 
 	format_in = AV_PIX_FMT_YUV420P;
 	format_out = AV_PIX_FMT_BGR24;
-	bit_rate = 1200;
+	bit_rate = 1000;
 	display_width = 640;
 	display_height = 360;
-	fps = 24;
+	fps = 14;
 
 	codec_ctx = avcodec_alloc_context3(codec);
 	if (!codec_ctx)
@@ -166,15 +166,13 @@ void VideoStaging::run_service()
 			init_or_frame_changed(vf, true);
 			have_received = true;
 		}
-		if(add_frame_buffer(vf))
-		{
-		}
+		add_frame_buffer(vf);
 #ifdef DEBUG_VIDEO_STAGING
 		last_end = HRClock::now();
-		times.push_back((duration_cast<milliseconds>(last_end - start_gap)).count());
+		times.push_back((duration_cast<milliseconds>(last_end - last_start)).count());
 		if (times.size() == 100) {
 			auto v = std::accumulate(times.begin(), times.end(), 0.0) / times.size();
-			qDebug() << "Average time for 100 frame " << v;
+			qDebug() << "Average time for 100 frame " << v << "ms";
 			times.clear();
 		}
 #endif

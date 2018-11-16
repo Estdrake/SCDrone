@@ -24,13 +24,14 @@ void print_video_stream_dump(video_encapsulation_t* PaVE) {
 VideoClient::VideoClient(ConcurrentQueue<VideoFrame>* queue)
 {
 	this->socket = new QTcpSocket(this);
-	this->queue = queue;
 	socket->connectToHost(WIFI_ARDRONE_IP, VIDEO_PORT);
+	this->queue = queue;
 }
 
 VideoClient::~VideoClient() = default;
 
 void VideoClient::run_service() {
+
 	QByteArray readBuffer;
 
 	VideoFrame vf{};
@@ -42,7 +43,11 @@ void VideoClient::run_service() {
 		while (stopRequested() == false) {
 			if (socket->waitForReadyRead()) {
 				if (socket->bytesAvailable() > 0) {
-					readBuffer = socket->readAll();
+						readBuffer = socket->readAll();
+						if (readBuffer.length() < socket->bytesAvailable()) {
+							
+							continue;
+						}
 				}
 				else {
 					continue;
@@ -59,7 +64,11 @@ void VideoClient::run_service() {
 					// Devrait peux etre faire une validation ici
 					vf.Data = new unsigned char[vf.Header.payload_size];
 					vf.Got = length - vf.Header.header_size;
-					const int missing = vf.Header.payload_size - vf.Got;
+					int missing = vf.Header.payload_size - vf.Got;
+					if (missing < 0) {
+						vf.Got = vf.Header.payload_size;
+						missing = 0;
+					}
 
 					memcpy(vf.Data, readBuffer.data() + vf.Header.header_size, vf.Got);
 

@@ -24,8 +24,8 @@ int DroneClient::init()
 		return 1;
 	}
 	at_thread = at_client.start();
-	vs_thread = video_staging.start();
 	vc_thread = video_client.start();
+	vs_thread = video_staging.start();
 	std::cout << "All thread are started" << std::endl;
 	return 0;
 }

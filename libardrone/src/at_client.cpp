@@ -46,10 +46,6 @@ void ATClient::run_service()
 		{
 			c = at_format_pcmd(HOVERING, 0, 0, 0, 0);
 		}
-		if (c[0] == '@')
-		{
-			break;
-		}
 		cmd.push_back(c);
 		cmd.push_back(at_format_ref(this->ref_mode.load()));
 		c = "";
@@ -95,15 +91,17 @@ void ATClient::on_read_ready()
 
 DroneControl::DroneControl(ATQueue* queue)
 {
+	this->started.store(false);
 	this->queue = queue;
 	this->interval_msg = 60ms;
 }
 
 void DroneControl::rotate(x_direction x, float speed)
 {
-	stop_current();
+	stop();
 	started = true;
 	this->futureObj = this->exitSignal.get_future();
+	std::cout << "Start rotation " << speed << std::endl;
 	this->futureCurrent = std::async(std::launch::async, [&, x, speed]()
 	{
 		float s = speed;
@@ -112,30 +110,34 @@ void DroneControl::rotate(x_direction x, float speed)
 		while (this->futureObj.wait_for(30ms) == std::future_status::timeout) {
 			this->queue->push(at_format_pcmd(HOVERING, 0, 0, 0, s));
 		}
+		std::cout << "End rotation" << std::endl;
 	});;
 }
 
 void DroneControl::move_x(x_direction x, float speed)
 {
-	stop_current();
+	stop();
 	started = true;
 	this->futureObj = this->exitSignal.get_future();
+	std::cout << "Start moving x " << speed << std::endl;
 	this->futureCurrent = std::async(std::launch::async, [&, x, speed]()
 	{
 		float s = speed;
 		if (x == LEFT)
 			s *= -1.0f;
 		while (this->futureObj.wait_for(30ms) == std::future_status::timeout) {
-			this->queue->push(at_format_pcmd(HOVERING, s, 0, 0, 0));
+			this->queue->push(at_format_pcmd(COMBINED_YAW, s, 0, 0, 0));
 		}
+		std::cout << "End moving x" << std::endl;
 	});
 }
 
 void DroneControl::move_y(y_direction y, float speed)
 {
-	stop_current();
+	stop();
 	started = true;
 	this->futureObj = this->exitSignal.get_future();
+	std::cout << "Start moving y " << speed << std::endl;
 	this->futureCurrent = std::async(std::launch::async, [&, y, speed]()
 	{
 		float s = speed;
@@ -144,22 +146,25 @@ void DroneControl::move_y(y_direction y, float speed)
 		while (this->futureObj.wait_for(30ms) == std::future_status::timeout) {
 			this->queue->push(at_format_pcmd(HOVERING, 0, 0, s, 0));
 		}
+		std::cout << "End moving y" << std::endl;
 	});;
 }
 
 void DroneControl::move_z(z_direction z, float speed)
 {
-	stop_current();
+	stop();
 	started = true;
 	this->futureObj = this->exitSignal.get_future();
+	std::cout << "Start moving z " << speed << std::endl;
 	this->futureCurrent = std::async(std::launch::async, [&,z,speed]()
 	{
 		float s = speed;
-		if (z == BACKWARD)
+		if (z == FORWARD)
 			s *= -1.0f;
 		while (this->futureObj.wait_for(30ms) == std::future_status::timeout) {
-			this->queue->push(at_format_pcmd(HOVERING, 0,s, 0, 0));
+			this->queue->push(at_format_pcmd(COMBINED_YAW, 0,s, 0, 0));
 		}
+		std::cout << "End moving z" << std::endl;
 	});
 }
 
@@ -176,19 +181,11 @@ bool DroneControl::wait_for(milliseconds ms) const
 void DroneControl::stop()
 {
 	if (started) {
+		std::cout << "Stopping current movement" << std::endl;
 		this->exitSignal.set_value();
+		this->futureCurrent.wait();
 		started = false;
 		queue->empty();
-		exitSignal = std::promise<void>();
-	}
-	started = false;
-}
-
-void DroneControl::stop_current()
-{
-	if (started) {
-		exitSignal.set_value();
-		futureCurrent.wait();
 		exitSignal = std::promise<void>();
 	}
 	started = false;

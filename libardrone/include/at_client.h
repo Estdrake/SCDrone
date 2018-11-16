@@ -66,8 +66,8 @@ class DroneControl
 	ATQueue* queue;
 	std::promise<void>			exitSignal;
 	std::shared_future<void>	futureObj;
-	std::future<void>			futureCurrent;
-	bool started = false;
+	std::shared_future<void>	futureCurrent;
+	std::atomic<bool>			started;
 
 	milliseconds		interval_msg{};
 
@@ -83,8 +83,6 @@ public:
 
 	bool wait_for(milliseconds ms) const;
 	void stop();
-private:
-	void stop_current();
 };
 
 #endif
