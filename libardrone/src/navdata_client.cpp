@@ -19,8 +19,28 @@ std::thread NavDataClient::start()
 
 
 void NavDataClient::run_service() {
-	
+	QByteArray readBuffer;
+	if (socket->waitForConnected(3000))
+	{
+		while (!stopRequested())
+		{
+			if (socket->bytesAvailable() > 0)
+			{
+				readBuffer = socket->readAll();
+			}
+			else {
+				continue;
+			}
+			int length = readBuffer.length();
+			bool endData = false;
+			if
 
 
 
+
+
+
+
+		}
+	}
 }
