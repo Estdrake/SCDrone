@@ -64,8 +64,10 @@ enum z_direction
 class DroneControl
 {
 	ATQueue* queue;
-	std::promise<void>	exitSignal;
-	std::future<void>	futureObj;
+	std::promise<void>			exitSignal;
+	std::shared_future<void>	futureObj;
+	std::future<void>			futureCurrent;
+	bool started = false;
 
 	milliseconds		interval_msg{};
 

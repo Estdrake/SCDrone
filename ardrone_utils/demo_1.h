@@ -36,8 +36,7 @@ void execute_demo_1()
 	std::thread vt = vc.start();
 	std::cout << "All thread are started" << std::endl;
 
-	cv::Mat m;
-
+	cv::Mat m = cv::imread("image4.png");
 	const char* wname = "Drone video stream";
 	cv::namedWindow(wname);
 
@@ -48,8 +47,7 @@ void execute_demo_1()
 		m = mqueue.pop2();
 		cv::imshow(wname, m);
 
-		char c = static_cast<char>(cv::waitKey(0));
-		std::cout << c << std::endl;
+		char c = static_cast<char>(cv::waitKey(10));
 		if (c == 27)
 			break;
 		switch (c)
@@ -67,30 +65,38 @@ void execute_demo_1()
 			control.stop();
 			break;
 		case 'w': // vers l'avant
+			std::cout << "Moving forward" << std::endl;
 			control.move_z(FORWARD, speed);
 			break;
 		case 'a': // vers gauche
+			std::cout << "Moving left" << std::endl;
 			control.move_x(LEFT, speed);
 			break;;
 		case 's': // vers arrière
+			std::cout << "Moving backward" << std::endl;
 			control.move_z(BACKWARD, speed);
 			break;
 		case 'd': // vers droit
+			std::cout << "Moving right" << std::endl;
 			control.move_x(RIGHT, speed);
 			break;;
 		case 'k': // moins gaz
+			std::cout << "Moving lower" << std::endl;
 			control.move_y(LOWER, speed);
 			break;
 		case 'l': // plus gaz
+			std::cout << "Moving higher" << std::endl;
 			control.move_y(HIGHER, speed);
 			break;
 		case '1': // descend la vitesse
 			if (speed > 0)
 				speed -= 0.1f;
+			std::cout << "Speed is now " << speed << std::endl;
 			break;
 		case '2': // augmente la vitess
 			if (speed < 1.0f)
 				speed += 0.1f;
+			std::cout << "Speed is now " << speed << std::endl;
 			break;
 		default:
 			break;
