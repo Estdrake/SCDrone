@@ -11,11 +11,11 @@
 
 #include <QtCore/QObject>
 #include <QtCore/QDebug>
-#include <QtNetwork/QTcpSocket>
+#include <QUdpSocket>
 
 typedef ConcurrentQueue<_navdata_option_t> NAVQueue;
 
-class NavDataClient{
+class NavDataClient: QObject,public Runnable{
 
     public:
         NavDataClient(NAVQueue* queue);
@@ -25,7 +25,7 @@ class NavDataClient{
 
     private:
 		NAVQueue*  queue;
-		QTcpSocket* socket;
+		QUdpSocket* socket;
 		QByteArray bufferNavData;
 		bool isConected;
 		void run_service();
