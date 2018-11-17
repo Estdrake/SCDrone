@@ -17,7 +17,9 @@ private:
 		const char* wname = "Drone video stream";
 		cv::namedWindow(wname);
 
-		float speed = 0.4f;
+		float speedXZ = 0.1f;
+		float speedYR = 0.4f;
+
 		bool has_image = false;
 
 		for (;;)
@@ -45,38 +47,69 @@ private:
 				control.stop();
 				break;
 			case 'w': // vers l'avant
-				control.move_z(FORWARD, speed);
+				control.move_z(FORWARD, speedXZ);
 				break;
 			case 'a': // vers gauche
-				control.move_x(LEFT, speed);
+				control.move_x(LEFT, speedXZ);
 				break;;
 			case 's': // vers arrière
-				control.move_z(BACKWARD, speed);
+				control.move_z(BACKWARD, speedXZ);
 				break;
 			case 'd': // vers droit
-				control.move_x(RIGHT, speed);
+				control.move_x(RIGHT, speedXZ);
 				break;;
 			case 'k': // moins gaz
-				control.move_y(LOWER, speed);
+				control.move_y(LOWER, speedYR);
 				break;
 			case 'l': // plus gaz
-				control.move_y(HIGHER, speed);
+				control.move_y(HIGHER, speedYR);
 				break;
 			case 'i':
-				control.rotate(LEFT, speed);
+				control.rotate(LEFT, speedYR);
 				break;
 			case 'o':
-				control.rotate(RIGHT, speed);
+				control.rotate(RIGHT, speedYR);
 				break;
-			case '1': // descend la vitesse
-				if (speed > 0.1f)
-					speed -= 0.1f;
-				std::cout << "Speed is " << speed << std::endl;
+			case 'q':
+				control.move_xy(LEFT, HIGHER, speedXZ,speedYR);
 				break;
-			case '2': // augmente la vitess
-				if (speed < 1.0f)
-					speed += 0.1f;
-				std::cout << "Speed is " << speed << std::endl;
+			case 'e':
+				control.move_xy(RIGHT, HIGHER, speedXZ, speedYR);
+				break;
+			case 'z':
+				control.move_xy(LEFT, LOWER, speedXZ, speedYR);
+				break;
+			case 'c':
+				control.move_xy(RIGHT, LOWER, speedXZ, speedYR);
+				break;
+			case '1': // descend la vitesse XY
+				if (speedXZ > 0.1f)
+					speedXZ -= 0.1f;
+				std::cout << "SpeedXZ is " << speedXZ << std::endl;
+				break;
+			case '2': // augmente la vitesse XY
+				if (speedXZ < 1.0f)
+					speedXZ += 0.1f;
+				std::cout << "SpeedXZ is " << speedXZ << std::endl;
+				break;
+			case '3': // descend la vitesse Z
+				if (speedYR < 1.0f)
+					speedYR += 0.1f;
+				std::cout << "SpeedYR is " << speedYR << std::endl;
+				break; 
+			case '4': // augmente la vitesse Z
+				if (speedYR > 0.1f)
+					speedYR += 0.1f;
+				std::cout << "SpeedYR is " << speedYR << std::endl;
+				break;
+			case '0': // Ground calibration
+				at_queue.push(at_format_ftrim());
+				break;
+			case '9': // Fly calibration
+				at_queue.push(at_format_calib(0));
+				break;
+			case '8': // Reset to allow flying again
+				at_client.set_ref(EMERGENCY_FLAG);
 				break;
 			default:
 				break;

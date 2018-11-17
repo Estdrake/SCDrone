@@ -33,10 +33,6 @@ void NavDataClient::run_service() {
 			}
 			int length = readBuffer.length();
 			bool endData = false;
-			if
-
-
-
 
 
 

@@ -78,6 +78,7 @@ public:
 	void move_x(x_direction, float speed);
 	void move_y(y_direction, float speed);
 	void move_z(z_direction, float speed);
+	void move_xy(x_direction, y_direction, float speedX, float speedY);
 
 	void set_interval(milliseconds ms) const;
 

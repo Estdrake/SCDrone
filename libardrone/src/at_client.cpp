@@ -168,6 +168,27 @@ void DroneControl::move_z(z_direction z, float speed)
 	});
 }
 
+void DroneControl::move_xy(x_direction x, y_direction y, float speedX, float speedY)
+{
+	stop();
+	started = true;
+	this->futureObj = this->exitSignal.get_future();
+	std::cout << "Start moving x " << speedX << " y " <<  speedY << std::endl;
+	this->futureCurrent = std::async(std::launch::async, [&,x,y,speedX,speedY]()
+	{
+		float sX = speedX;
+		float sY = speedY;
+		if (x == LEFT)
+			sX *= -1.0f;
+		if (y == LOWER)
+			sY *= -1.0f;
+		while (this->futureObj.wait_for(30ms) == std::future_status::timeout) {
+			this->queue->push(at_format_pcmd(COMBINED_YAW, sX, 0, sY, 0));
+		}
+		std::cout << "End moving xy" << std::endl;
+	});
+}
+
 void DroneControl::set_interval(milliseconds ms) const
 {
 	this->set_interval(ms);

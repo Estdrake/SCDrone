@@ -12,7 +12,7 @@ static const char* AT_VISO = "AT*VISO=%d,%d\r";
 static const char* AT_CAP = "AT*CAP=%d,%d,%d\r";
 static const char* AT_ZAP = "AT*ZAP=%d,%d\r";
 
-static const char* AT_FTRIM = "AT*FTRIM=%d,\r"; // Tells the drone it is lying horizontally
+static const char* AT_FTRIM = "AT*FTRIM=$seq\r"; // Tells the drone it is lying horizontally
 static const char* AT_MTRIM = "AT*MTRIM=%d,%d,%d,%d\r";
 
 static const char* AT_POLL = "AT*POLL=%d,%d,%d,%d,%d,%d\r";
@@ -21,10 +21,10 @@ static const char* AT_PCMD_MAG = "AT*PCMD_MAG=%d,%d,%d,%d,%d,%d,%d,%d\r";
 static const char* AT_CONFIG = "AT*CONFIG=$seq,\"%s\",\"%s\"\r";
 static const char* AT_CONFIG_IDS = "AT*CONFIG_IDS=%d,\"%s\",\"%s\",\"%s\"\r";
 static const char* AT_CTRL = "AT*CTRL=$seq,%d,%d\r";
-static const char* AT_COMWDG = "AT*COMWDG=%d\r";
+static const char* AT_COMWDG = "AT*COMWDG=$seq\r"; // Redemarre les watch dog de communication
 static const char* AT_PWM = "AT*PWM=%d,%d,%d,%d,%d\r";
 static const char* AT_ATFLIGHT = "AT*ATFLIGHT=%d,%d\r";
-static const char* AT_CALIB = "AT*CALIB=%d,%d\r";
+static const char* AT_CALIB = "AT*CALIB=$seq,%d\r"; // Calibrer le drone en vol ajuste magnétometre
 
 
 enum ref_flags
@@ -56,6 +56,16 @@ std::string string_format(const char* format, Args ... args)
 inline std::string at_format_ref(ref_flags flag)
 {
 	return string_format(AT_REF, flag);
+}
+
+inline std::string at_format_ftrim()
+{
+	return AT_FTRIM;
+}
+
+inline std::string at_format_calib(int flag)
+{
+	return string_format(AT_CALIB, flag);
 }
 
 inline std::string at_format_pcmd(int flag, float roll, float pitch, float gaz, float yaw)
