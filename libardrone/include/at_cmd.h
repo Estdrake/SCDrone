@@ -74,7 +74,7 @@ inline std::string at_format_pcmd(int flag, float roll, float pitch, float gaz, 
 	return string_format(AT_PCMD, flag, *(int32_t*)(&roll), *(int32_t*)(&pitch), *(int32_t*)(&gaz), *(int32_t*)(&yaw));
 }
 
-inline std::string at_format_controlinit()
+inline std::string at_format_ack()
 {
 	return string_format(AT_CTRL, 0);
 }

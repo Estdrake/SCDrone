@@ -13,22 +13,34 @@
 #include <QtCore/QDebug>
 #include <QUdpSocket>
 
+#include <asio.hpp>
+using namespace asio;
+using ip::udp;
+using ip::address;
+
 typedef ConcurrentQueue<_navdata_option_t> NAVQueue;
 
-class NavDataClient: QObject,public Runnable{
+class NavDataClient: public Runnable{
 
     public:
         NavDataClient(NAVQueue* queue);
         ~NavDataClient();
 
-		std::thread start();
-
     private:
-		NAVQueue*  queue;
-		QUdpSocket* socket;
-		QByteArray bufferNavData;
-		bool isConected;
-		void run_service();
+		void init_communication();
+		
+	NAVQueue*			queue;
+
+	io_service			ios;
+	udp::endpoint		remote_endpoint;
+	udp::endpoint		local_endpoint;
+	udp::socket			socket;
+
+	uint8_t*			recv_buffer;
+
+	
+
+	void run_service() override;
 };
 
 #endif // _NAVDATA_CLIENT_H_

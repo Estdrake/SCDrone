@@ -12,6 +12,8 @@ set( TCLAP_INCLUDE_DIR "" CACHE PATH "The path containing tclap/TclpCmd.h")
 set( LIBAV_INCLUDE_DIR "" CACHE PATH "The path containing libavcodec/avcodec.h")
 set( LIBAV_LIBRARY_DIR "" CACHE PATH "The path containing avcodec.a or avcodec.lib")
 
+set( ASIO_INCLUDE_DIR "" CACHE PATH "The path containing asio/asio.hpp")
+add_definitions(-DASIO_STANDALONE)
 enable_testing()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -34,6 +36,7 @@ include_directories(
 	${OpenCV_INCLUDE_DIRS}
 	${TCLAP_INCLUDE_DIR}
 	${LIBAV_INCLUDE_DIR}
+	${ASIO_INCLUDE_DIR}
 )
 
 link_directories(
