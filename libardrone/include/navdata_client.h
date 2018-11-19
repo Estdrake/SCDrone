@@ -19,6 +19,8 @@ class NavDataClient: public Runnable{
         NavDataClient(NAVQueue* queue);
         ~NavDataClient();
 
+		navdata_demo_t get_last_nd_demo();
+
     private:
 		void init_communication();
 		
@@ -28,6 +30,8 @@ class NavDataClient: public Runnable{
 	udp::endpoint		remote_endpoint;
 	udp::endpoint		local_endpoint;
 	udp::socket			socket;
+
+	std::atomic<navdata_demo_t> last_navdata;
 
 	uint8_t*			recv_buffer;
 

@@ -33,8 +33,6 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 find_package( OpenCV REQUIRED)
 find_package( Qt5Network REQUIRED)
 find_package( Qt5Gamepad REQUIRED)
-find_package( Qt5Gui REQUIRED)
-find_package( Qt5Widgets REQUIRED)
 
 include_directories( 
 	${OpenCV_INCLUDE_DIRS}
@@ -55,6 +53,5 @@ add_subdirectory("libardrone")
 add_subdirectory("libcontrol")
 add_subdirectory("ardrone_utils")
 add_subdirectory("ardrone_test")
-add_subdirectory("ardrone_qt")
 add_subdirectory("ardrone_keyboard")
 

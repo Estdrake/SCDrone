@@ -41,6 +41,11 @@ NavDataClient::~NavDataClient()
 	delete recv_buffer;
 }
 
+navdata_demo_t NavDataClient::get_last_nd_demo()
+{
+	return last_navdata.load();
+}
+
 
 void NavDataClient::init_communication()
 {
@@ -78,7 +83,7 @@ void NavDataClient::run_service() {
 					{
 						memcpy(&nd_demo, recv_buffer+i, sizeof(navdata_demo_t));
 						//print_navdata_demo_dump(&nd_demo);
-						queue->push(nd_demo);
+						last_navdata.store(nd_demo);
 						break;
 					}
 					

@@ -8,6 +8,7 @@ set(ARDRONE_UTILS_VERSION_MINOR 1)
 
 include_directories (
     "${PROJECT_SOURCE_DIR}/libardrone/include"
+    "${PROJECT_SOURCE_DIR}/libcontrol/"
 )
 
 # Add source to this project's executable.
@@ -18,6 +19,6 @@ if(NOT WIN32)
 endif ()
 
 # Ajoute le lien a ma librairie
-target_link_libraries (ardrone_keyboard libardrone Qt5::Network ${OpenCV_LIBS} ${LINK_FS} ${LIBAV_LIBS} ) 
+target_link_libraries (ardrone_keyboard libcontrol libardrone Qt5::Network ${OpenCV_LIBS} ${LINK_FS} ${LIBAV_LIBS} ) 
 
 install (TARGETS ardrone_keyboard DESTINATION bin)

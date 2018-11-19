@@ -4,30 +4,52 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include "filter.h"
+
 
 class DroneKB : public DroneClient
 {
 public:
 	virtual ~DroneKB() = default;
 
+	DroneKB() : last_mat(640,360,CV_8UC3,cv::Scalar(0,0,0)), presentation_mat(last_mat.clone())
+	{
+		nd = {};
+		speedXZ = 0.1f;
+		speedYR = 0.4f;
+	}
+
 private:
 
-	void on_trackbar(int v,void*)
+	cv::Mat					last_mat;
+	cv::Mat					presentation_mat;
+
+	navdata_demo_t			nd;
+
+	float					speedXZ;
+	float					speedYR;
+
+	void displayCurrentInfo(int noise)
 	{
-		
+		std::stringstream ss;
+		ss << "Battery " << nd.vbat_flying_percentage << "% " << "Altitude " << nd.altitude << " Phi " << nd.phi << " Theta " << nd.theta << " Psi " << nd.psi;
+		cv::putText(presentation_mat, ss.str(), cv::Point(30, 30), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(0, 0, 255), 1);
+		ss = std::stringstream();
+		ss << "Velocity X " << nd.vx << " Y " << nd.vy << " Z " << nd.vz;
+		cv::putText(presentation_mat, ss.str(), cv::Point(30, 60), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(0, 0, 255), 1);
+		ss = std::stringstream();
+		ss << "Image noise " << noise;
+		cv::putText(presentation_mat, ss.str(), cv::Point(30, 90), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(0, 0, 255), 1);
+		ss = std::stringstream();
+		ss << "Speed XZ " << speedXZ << " Speed YR " << speedYR;
+		cv::putText(presentation_mat, ss.str(), cv::Point(30, 330), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(0, 0, 255), 1);
 	}
 
 	void mainLoop() override
 	{
 		cv::Mat m;
-		cv::Mat presentation_mat; // mat qu'on affiche a l'ecran avec les informations
-		navdata_demo_t nd;
-
 		const char* wname = "Drone video stream";
 		cv::namedWindow(wname);
-
-		float speedXZ = 0.1f;
-		float speedYR = 0.4f;
 
 		bool has_image = false;
 		bool has_navdata = false;
@@ -39,23 +61,19 @@ private:
 		for (;;)
 		{
 			m = mat_queue.pop2_wait(100ms,&has_image);
-			nd = nav_queue.pop_wait(50ms, &has_navdata);
-			if(has_navdata && has_image)
-			{
-				std::stringstream ss;
-				ss << "Battery " << nd.vbat_flying_percentage << "% " << "Altitude " << nd.altitude << " Phi " << nd.phi << " Theta " << nd.theta << " Psi " << nd.psi << std::endl;
-				ss << "Velocity X " << nd.vx << " Y " << nd.vy << " Z " << nd.vz;
-				cv::putText(m, ss.str(), cv::Point(30, 30), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(200, 200, 250), 1);
-				//ss.clear();
-				//cv::putText(m, ss.str(), cv::Point(30, 80), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(200, 200, 250), 1);
-				
-			} else
-			{
-				
-			}
-			
+			//nd = nav_queue.pop_wait(50ms, &has_navdata);
+			nd = nd_client.get_last_nd_demo();
 			if (has_image)
-				cv::imshow(wname, m);
+				last_mat = m;
+
+			presentation_mat = last_mat.clone();
+
+			int v = get_image_noise_level(last_mat);
+
+			displayCurrentInfo(v);
+
+				
+			cv::imshow(wname, presentation_mat);
 
 
 			char c = static_cast<char>(cv::waitKey(30));
