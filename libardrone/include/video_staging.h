@@ -67,12 +67,16 @@ class VideoStaging : public Runnable
 
 	bool						have_received;				// Indique si on n'a déjà commencer a recevoir des trames
 	bool						only_idr = true;			// Indique si on souhaite selon parser les frames IDR et de skipper les frames P
-	bool						record_to_file_raw = false; // Indique si on souhaite sauvegarder le stream dans un fichier
-	const char*					record_file = nullptr;		// Indique le chemin du fichier a sauvegarder le stream
+
+	atomic<bool>				record_to_file_raw = false; // Indique si on souhaite sauvegarder le stream dans un fichier
+	const char*					record_folder = nullptr;		// Indique le chemin du fichier a sauvegarder le stream
+	int							stream_index = 0;
 	std::ofstream				of;
 
 	VFQueue*					queue;						// La queue dans laquelle les frames reçu par TCP arrivent
 	MQueue*						mqueue;
+
+	
 
 public:
 	VideoStaging(VFQueue* queue, MQueue* mqueue);
@@ -81,7 +85,9 @@ public:
 
 	int	init() const;
 
-	void run_service();
+	void run_service() override;
+
+	void set_raw_recording(bool state);
 
 private:
 

@@ -11,12 +11,13 @@ int main(int argc, char* argv[])
 {
 	execute_demo_1();
 	return 0;
+	/*
 	QCoreApplication a(argc, argv);
 	ATQueue queue;
 	ATClient client(&queue,&a);
 	std::thread t = client.start();
 	GamepadMonitor monitor(&queue,&a,&client);
-	/*
+	
 	bool run = true;
 
 	ref_flags f = DEFAULT_FLAG;
@@ -59,6 +60,5 @@ int main(int argc, char* argv[])
 		//queue.push(at_format_pcmd(PROGRESSIVE, roll, pitch, gaz, yaw));
 	}
 	*/
-	a.exec();
 	return 0;
 }

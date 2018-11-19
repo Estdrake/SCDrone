@@ -68,9 +68,16 @@ Et dans cette ensemble de thread viennent s'ajouter les threads de l'application
 
 ### Thread AT
 
+Thread qui s'occupe de l'envoi des trames de contrôles au drone. Pour que le drone soit controller fluidement
+l'interval entre les messages envoier doit être de 30ms.
+
 ### Thread NavData
 
+Supporte seulement la réception de la structure navdata_demo_t 
+
 ### Thread Control
+
+Pas implémenter dans l'application pour le moment
 
 ### Thread Video
 

@@ -13,6 +13,8 @@
 #include <QObject>
 #include <QUdpSocket>
 #include <navdata_common.h>
+#include <chrono>
+#include <future>
 
 typedef ConcurrentQueue<std::string> ATQueue;
 
@@ -69,7 +71,7 @@ class DroneControl
 	std::shared_future<void>	futureCurrent;
 	std::atomic<bool>			started;
 
-	milliseconds		interval_msg{};
+	std::chrono::milliseconds		interval_msg{};
 
 public:
 	DroneControl(ATQueue* queue);
@@ -80,9 +82,9 @@ public:
 	void move_z(z_direction, float speed);
 	void move_xy(x_direction, y_direction, float speedX, float speedY);
 
-	void set_interval(milliseconds ms) const;
+	void set_interval(std::chrono::milliseconds ms) const;
 
-	bool wait_for(milliseconds ms) const;
+	bool wait_for(std::chrono::milliseconds ms) const;
 	void stop();
 };
 

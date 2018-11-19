@@ -2,6 +2,7 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 
 
 class DroneKB : public DroneClient
@@ -10,9 +11,17 @@ public:
 	virtual ~DroneKB() = default;
 
 private:
+
+	void on_trackbar(int v,void*)
+	{
+		
+	}
+
 	void mainLoop() override
 	{
 		cv::Mat m;
+		cv::Mat presentation_mat; // mat qu'on affiche a l'ecran avec les informations
+		navdata_demo_t nd;
 
 		const char* wname = "Drone video stream";
 		cv::namedWindow(wname);
@@ -21,12 +30,33 @@ private:
 		float speedYR = 0.4f;
 
 		bool has_image = false;
+		bool has_navdata = false;
+
+		string navconf = at_format_config("general:navdata_demo", "TRUE");
+		navconf.append(at_format_ack());
+		at_queue.push(navconf);
 
 		for (;;)
 		{
-			m = mat_queue.pop2_wait(200ms,&has_image);
+			m = mat_queue.pop2_wait(100ms,&has_image);
+			nd = nav_queue.pop_wait(50ms, &has_navdata);
+			if(has_navdata && has_image)
+			{
+				std::stringstream ss;
+				ss << "Battery " << nd.vbat_flying_percentage << "% " << "Altitude " << nd.altitude << " Phi " << nd.phi << " Theta " << nd.theta << " Psi " << nd.psi << std::endl;
+				ss << "Velocity X " << nd.vx << " Y " << nd.vy << " Z " << nd.vz;
+				cv::putText(m, ss.str(), cv::Point(30, 30), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(200, 200, 250), 1);
+				//ss.clear();
+				//cv::putText(m, ss.str(), cv::Point(30, 80), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(200, 200, 250), 1);
+				
+			} else
+			{
+				
+			}
+			
 			if (has_image)
 				cv::imshow(wname, m);
+
 
 			char c = static_cast<char>(cv::waitKey(30));
 			if (c == 27)

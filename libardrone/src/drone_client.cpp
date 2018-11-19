@@ -1,9 +1,10 @@
 #include "drone_client.h"
 
 DroneClient::DroneClient() :
-	video_staging(&vf_queue,&mat_queue),
+	video_staging(&vf_queue, &mat_queue),
 	video_client(&vf_queue),
 	at_client(&at_queue),
+	nd_client(&nav_queue),
 	control(&at_queue)
 {
 }
@@ -26,6 +27,7 @@ int DroneClient::init()
 	at_thread = at_client.start();
 	vc_thread = video_client.start();
 	vs_thread = video_staging.start();
+	nd_thread = nd_client.start();
 	std::cout << "All thread are started" << std::endl;
 	return 0;
 }
@@ -39,7 +41,9 @@ int DroneClient::stop()
 	video_staging.stop();
 	video_client.stop();
 	at_client.stop();
+	nd_client.stop();
 
+	nd_thread.join();
 	vs_thread.join();
 	vc_thread.join();
 	at_thread.join();

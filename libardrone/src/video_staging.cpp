@@ -133,7 +133,7 @@ int VideoStaging::init() const
 		return 1;
 	}
 	// Ouvre le fichier 
-	if(record_file)
+	if(record_folder)
 	{
 	}
 #ifdef DEBUG_VIDEO_STAGING
@@ -182,6 +182,36 @@ void VideoStaging::run_service()
 		}
 	}
 	std::cout << "Video stagging has been stop" << std::endl;
+}
+
+void VideoStaging::set_raw_recording(bool state)
+{
+	if(!state)
+	{
+		record_to_file_raw = false;
+		// la thread ne devrait plus ecrire dans le fichier raw on le ferme
+		of.close();
+	} else
+	{
+		if(!record_to_file_raw)
+		{
+			time_t rawTime;
+			tm * timeInfo;
+			char buffer[80];
+			time(&rawTime);
+			timeInfo = localtime(&rawTime);
+			size_t s = strftime(buffer, sizeof(buffer), "%d-%m %H:%M:%S", timeInfo);
+			string filename(buffer);
+			filename.append(".x264");
+			of.open("recording.x264",ofstream::binary | ofstream::out);
+			if(!of.is_open())
+			{
+				std::cout << "Could not start writting to " << filename << std::endl;
+				return;
+			}
+			record_to_file_raw = true;
+		}
+	}
 }
 
 
@@ -275,4 +305,5 @@ bool VideoStaging::frame_to_mat(const AVFrame* avframe, cv::Mat& m)
 
 void VideoStaging::append_file(const VideoFrame& vf)
 {
+	of.write((char*)vf.Data, vf.Header.payload_size);
 }

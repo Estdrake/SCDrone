@@ -69,7 +69,7 @@ typedef struct _navdata_option_t {
     uint16_t    size;  // Longeur de la structure
 
     uint8_t     data[];
-} navadata_option_t;
+} navdata_option_t;
 
 
 typedef struct _navdata_t {
@@ -78,7 +78,7 @@ typedef struct _navdata_t {
     uint32_t    sequence;
     bool_t      vision_defined;
 
-    navadata_option_t* options;
+	navdata_option_t* options;
 } navdata_t;
 
 /**

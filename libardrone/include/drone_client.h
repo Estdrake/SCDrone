@@ -21,11 +21,13 @@ protected:
 	VideoStaging		video_staging;	
 	VideoClient			video_client;
 	ATClient			at_client;
+	NavDataClient		nd_client;
 	DroneControl		control;
 private:
 	std::thread			vs_thread;
 	std::thread			vc_thread;
 	std::thread			at_thread;
+	std::thread			nd_thread;
 
 public:
 	DroneClient();

@@ -24,8 +24,8 @@ void execute_atcmd_test(bool printAllTrame = true)
 	std::this_thread::sleep_for(500ms);
 	std::string navconf = at_format_config("general:navdata_demo", "TRUE");
 	std::string ack = at_format_ack();
-	at.push(navconf);
-	at.push(ack);
+	//at.push(navconf);
+	//at.push(ack);
 	navconf = at_format_config("general:navdata_demo", "TRUE");
 	navconf.append(at_format_ack());
 	at.push(navconf);

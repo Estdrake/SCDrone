@@ -28,6 +28,7 @@ class Runnable {
 	std::future<void> futureObject;
 
 public:
+	virtual ~Runnable() = default;
 	Runnable() :futureObject(exitSignal.get_future()) {}
 	Runnable(Runnable && obj) : exitSignal(std::move(obj.exitSignal)), futureObject(std::move(obj.futureObject)) {
 		std::cout << "Move Constructor called" << std::endl;

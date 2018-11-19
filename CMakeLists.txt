@@ -14,6 +14,9 @@ set( LIBAV_LIBRARY_DIR "" CACHE PATH "The path containing avcodec.a or avcodec.l
 
 set( ASIO_INCLUDE_DIR "" CACHE PATH "The path containing asio/asio.hpp")
 add_definitions(-DASIO_STANDALONE)
+if(WIN32)
+	add_definitions(-D_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING -D_WIN32_WINNT=0xA00 -DUNICODE)
+endif()
 enable_testing()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -31,12 +34,14 @@ find_package( OpenCV REQUIRED)
 find_package( Qt5Network REQUIRED)
 find_package( Qt5Gamepad REQUIRED)
 find_package( Qt5Gui REQUIRED)
+find_package( Qt5Widgets REQUIRED)
 
 include_directories( 
 	${OpenCV_INCLUDE_DIRS}
 	${TCLAP_INCLUDE_DIR}
 	${LIBAV_INCLUDE_DIR}
 	${ASIO_INCLUDE_DIR}
+	${QT_INCLUDES}
 )
 
 link_directories(
@@ -50,5 +55,6 @@ add_subdirectory("libardrone")
 add_subdirectory("libcontrol")
 add_subdirectory("ardrone_utils")
 add_subdirectory("ardrone_test")
+add_subdirectory("ardrone_qt")
 add_subdirectory("ardrone_keyboard")
 
