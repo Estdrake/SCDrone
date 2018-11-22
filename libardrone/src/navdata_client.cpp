@@ -20,9 +20,10 @@ void print_navdata_demo_dump(navdata_demo_t* demo)
 	printf("Demo size : %d\n", demo->size);
 	printf("Control state %d\n", demo->ctrl_state);
 	printf("Battery voltage (mV) %d\n", demo->vbat_flying_percentage);
-	printf("Theta %f Phi %f Psi %f\n", demo->theta,demo->phi, demo->psi);
+	printf("Theta %f Phi %f Psi %f\n", demo->theta/1000,demo->phi/1000, demo->psi/1000);
 	printf("Altitude %d\n", demo->altitude);
 	printf("Velocity X : %f Y : %f Z %f\n", demo->vx, demo->vy, demo->vz);
+	printf("numero frame : %d\n", demo->num_frames);
 }
 
 bool start_by_navdata_header(const uint8_t* buffer)
@@ -33,7 +34,7 @@ bool start_by_navdata_header(const uint8_t* buffer)
 NavDataClient::NavDataClient(NAVQueue* queue) : local_endpoint(udp::v4(),NAVDATA_PORT),socket(ios,local_endpoint) {
 	this->queue = queue;
 	this->remote_endpoint = udp::endpoint(ip::address::from_string(WIFI_ARDRONE_IP), NAVDATA_PORT);
-	this->recv_buffer = new uint8_t[542];
+	this->recv_buffer = new uint8_t[800];
 }
 
 NavDataClient::~NavDataClient()
@@ -82,7 +83,7 @@ void NavDataClient::run_service() {
 					if(tag == NAVDATA_DEMO && size > 0)
 					{
 						memcpy(&nd_demo, recv_buffer+i, sizeof(navdata_demo_t));
-						//print_navdata_demo_dump(&nd_demo);
+						print_navdata_demo_dump(&nd_demo);
 						last_navdata.store(nd_demo);
 						break;
 					}

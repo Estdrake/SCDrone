@@ -32,7 +32,7 @@ private:
 	void displayCurrentInfo(int noise)
 	{
 		std::stringstream ss;
-		ss << "Battery " << nd.vbat_flying_percentage << "% " << "Altitude " << nd.altitude << " Phi " << nd.phi << " Theta " << nd.theta << " Psi " << nd.psi;
+		ss << "Battery " << nd.vbat_flying_percentage << "% " << "Altitude " << nd.altitude << " Phi " << nd.phi/1000 << " Theta " << nd.theta/1000 << " Psi " << nd.psi/1000;
 		cv::putText(presentation_mat, ss.str(), cv::Point(30, 30), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(0, 0, 255), 1);
 		ss = std::stringstream();
 		ss << "Velocity X " << nd.vx << " Y " << nd.vy << " Z " << nd.vz;
@@ -141,12 +141,12 @@ private:
 				std::cout << "SpeedXZ is " << speedXZ << std::endl;
 				break;
 			case '3': // descend la vitesse Z
-				if (speedYR < 1.0f)
-					speedYR += 0.1f;
+				if (speedYR > 0.1f)
+					speedYR -= 0.1f;
 				std::cout << "SpeedYR is " << speedYR << std::endl;
 				break; 
 			case '4': // augmente la vitesse Z
-				if (speedYR > 0.1f)
+				if (speedYR < 1.0f)
 					speedYR += 0.1f;
 				std::cout << "SpeedYR is " << speedYR << std::endl;
 				break;
