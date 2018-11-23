@@ -37,6 +37,23 @@ public:
 
 	void set_ref(ref_flags f);
 
+	const char* get_ref()
+	{
+		ref_flags f = ref_mode;
+		switch(f)
+		{
+		case EMERGENCY_FLAG:
+			return "EMERGENCY";
+		case TAKEOFF_FLAG:
+			return "FLYING";
+		default:
+			return "LANDED";
+		}
+		
+	}
+
+
+
 
 public slots:
 	void run_service();

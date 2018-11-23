@@ -9,7 +9,7 @@
       ],
       "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
       "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
-      "cmakeCommandArgs": "-DOpenCV_DIR=C:\\Users\\wq\\Downloads\\opencv\\build -DASIO_INCLUDE_DIR=D:\\VC17_LIB\\asio\\include -DTCLAP_INCLUDE_DIR=D:\\VC17_LIB\\tclap\\include -DQt5Gamepad_DIR=D:\\VC17_LIB\\qt\\lib\\cmake\\Qt5Gamepad -DQt5Widgets=D:\\VC17_LIB\\qt\\lib\\cmake\\Qt5Widgets -DQt5Network_DIR=D:\\VC17_LIB\\qt\\lib\\cmake\\Qt5Network -DLIBAV_INCLUDE_DIR=D:\\VC17_LIB\\ffmpeg\\include -DLIBAV_LIBRARY_DIR=D:\\VC17_LIB\\ffmpeg\\lib",
+      "cmakeCommandArgs": "-DSOIL_INCLUDE_PATH=D:\\VC17_LIB\\soil64\\include -DSOIL_LIBRARY=D:\\VC17_LIB\\soil64\\lib -DSTB_INCLUDE_PATH=D:\\VC17_LIB\\stb  -DASSIMP_LIBRARY=D:\\VC17_LIB\\Assimp64\\lib -DASSIMP_INCLUDE_PATH=D:\\VC17_LIB\\Assimp64\\include -DGLM_INCLUDE_PATH=D:\\VC17_LIB\\glm\\include -DGLEW_INCLUDE_PATH=D:\\VC17_LIB\\glew64\\include -DGLEW_LIBRARY=D:\\VC17_LIB\\glew64\\lib -DGLFW_INCLUDE_PATH=D:\\VC17_LIB\\GLFW64\\include -DGLFW_LIBRARY=D:\\VC17_LIB\\GLFW64\\lib -DOpenCV_DIR=C:\\Users\\wq\\Downloads\\opencv\\build -DASIO_INCLUDE_DIR=D:\\VC17_LIB\\asio\\include -DTCLAP_INCLUDE_DIR=D:\\VC17_LIB\\tclap\\include -DQt5Gamepad_DIR=D:\\VC17_LIB\\qt\\lib\\cmake\\Qt5Gamepad -DQt5Widgets=D:\\VC17_LIB\\qt\\lib\\cmake\\Qt5Widgets -DQt5Network_DIR=D:\\VC17_LIB\\qt\\lib\\cmake\\Qt5Network -DLIBAV_INCLUDE_DIR=D:\\VC17_LIB\\ffmpeg\\include -DLIBAV_LIBRARY_DIR=D:\\VC17_LIB\\ffmpeg\\lib",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": ""
     }

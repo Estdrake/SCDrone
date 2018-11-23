@@ -24,6 +24,23 @@ extern "C" {
 
 typedef ConcurrentQueue<cv::Mat> MQueue;
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
+
+
+struct video_staging_info
+{
+	int					codec;
+	int					bit_rate;
+	int					d_width;
+	int					d_height;
+
+	double					average_decoding_time;
+	int					nbr_frame_gap;
+	
+	bool				is_recording_raw;
+	const char*			file_name;
+
+};
+
 class VideoStaging : public Runnable
 {
 	video_encapsulation_t		prev_encapsulation_ = {}; // Dernier header PaVE reçu
@@ -76,6 +93,7 @@ class VideoStaging : public Runnable
 	VFQueue*					queue;						// La queue dans laquelle les frames reçu par TCP arrivent
 	MQueue*						mqueue;
 
+	std::atomic<video_staging_info> staging_info;
 	
 
 public:
@@ -88,6 +106,11 @@ public:
 	void run_service() override;
 
 	void set_raw_recording(bool state);
+
+	video_staging_info getInfo()
+	{
+		return staging_info;
+	}
 
 private:
 

@@ -14,7 +14,7 @@ VideoStaging::VideoStaging(VFQueue* queue, MQueue* mqueue) : of(), Runnable()
 {
 #ifdef DEBUG_VIDEO_STAGING
 	start_gap = HRClock::now();
-	qDebug() << "Starting video staging";
+	//qDebug() << "Starting video staging";
 #endif
 	avcodec_register_all();
 	this->queue = queue;
@@ -90,6 +90,12 @@ VideoStaging::VideoStaging(VFQueue* queue, MQueue* mqueue) : of(), Runnable()
 	buffer_array = (uint8_t**)malloc(sizeof(uint8_t*));
 	img_convert_ctx = nullptr;
 
+	record_folder = "";
+
+	this->staging_info = {
+		 CODEC_MPEG4_AVC, bit_rate, display_width,
+		display_height, 0.0,100,record_to_file_raw, record_folder
+	};
 
 }
 
@@ -138,7 +144,7 @@ int VideoStaging::init() const
 	}
 #ifdef DEBUG_VIDEO_STAGING
 	auto end = HRClock::now();
-	qDebug() << "End video staging initialization : " << duration_cast<milliseconds>(end-start_gap).count() << "ms";
+	//qDebug() << "End video staging initialization : " << duration_cast<milliseconds>(end-start_gap).count() << "ms";
 #endif
 
 	return 0;
@@ -156,7 +162,7 @@ void VideoStaging::run_service()
 			continue;
 #ifdef DEBUG_VIDEO_STAGING
 		if (last_frame != 0 && last_frame + 1 != vf.Header.frame_number) { // on n'a manquer des frames
-			qDebug() << "We have lose " << (vf.Header.frame_number - last_frame) << " frames on staging";
+			//qDebug() << "We have lose " << (vf.Header.frame_number - last_frame) << " frames on staging";
 		}
 		last_frame = vf.Header.frame_number;
 		last_start = std::chrono::high_resolution_clock::now();
@@ -172,7 +178,11 @@ void VideoStaging::run_service()
 		times.push_back((duration_cast<milliseconds>(last_end - last_start)).count());
 		if (times.size() == 100) {
 			auto v = std::accumulate(times.begin(), times.end(), 0.0) / times.size();
-			qDebug() << "Average time for 100 frame " << v << "ms";
+			//qDebug() << "Average time for 100 frame " << v << "ms";
+			this->staging_info = {
+				CODEC_MPEG4_AVC, bit_rate, display_width,
+				display_height, v,100,record_to_file_raw, record_folder
+			};
 			times.clear();
 		}
 #endif
