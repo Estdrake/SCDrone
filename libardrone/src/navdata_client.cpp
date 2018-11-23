@@ -83,7 +83,7 @@ void NavDataClient::run_service() {
 					if(tag == NAVDATA_DEMO && size > 0)
 					{
 						memcpy(&nd_demo, recv_buffer+i, sizeof(navdata_demo_t));
-						print_navdata_demo_dump(&nd_demo);
+						//print_navdata_demo_dump(&nd_demo);
 						last_navdata.store(nd_demo);
 						break;
 					}
