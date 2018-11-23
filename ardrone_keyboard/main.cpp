@@ -5,6 +5,7 @@
 #include <opencv2/imgproc.hpp>
 
 #include "filter.h"
+#include "tracking.h"
 
 
 class DroneKB : public DroneClient
@@ -60,7 +61,7 @@ private:
 
 		for (;;)
 		{
-			m = mat_queue.pop2_wait(100ms,&has_image);
+			m = mat_queue.pop2_wait(10ms,&has_image);
 			//nd = nav_queue.pop_wait(50ms, &has_navdata);
 			nd = nd_client.get_last_nd_demo();
 			if (has_image)
@@ -69,9 +70,12 @@ private:
 			presentation_mat = last_mat.clone();
 
 			int v = get_image_noise_level(last_mat);
+			cv::imshow("ref", presentation_mat);
+			traitementImage(presentation_mat, presentation_mat);
 
 			displayCurrentInfo(v);
 
+			
 				
 			cv::imshow(wname, presentation_mat);
 
