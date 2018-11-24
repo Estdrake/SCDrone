@@ -2,7 +2,7 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp><
+#include <opencv2/imgproc.hpp>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -16,6 +16,8 @@
 #include "imgui_internal.h"
 
 #include "logger.h"
+
+// NEED overlay avec les metrics de la boucle principal et de GLFW
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -118,8 +120,10 @@ private:
 	bool					show_nd = true;
 	bool					show_vs_info = false;
 	bool					show_log = false;
-	bool					show_basic_cmd_drone = true;
-	bool					show_color_obj_tracking = false;
+	bool					show_basic_cmd_drone = false;
+	bool					show_color_obj_tracking = true;
+
+	bool					show_demo = false;
 
 	void show_log_window()
 	{
@@ -133,6 +137,36 @@ private:
 			}
 			log.Draw("Logger AR Drone",&show_log);
 		}
+	}
+
+	void show_metric_overlay(bool* p_open) {
+		const float DISTANCE = 10.0f;
+		static int corner = 0;
+		ImVec2 window_pos = ImVec2((corner & 1) ? ImGui::GetIO().DisplaySize.x - DISTANCE : DISTANCE, (corner & 2) ? ImGui::GetIO().DisplaySize.y - DISTANCE : DISTANCE);
+		ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
+		if (corner != -1)
+			ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+		ImGui::SetNextWindowBgAlpha(0.3f); // Transparent background
+		if (ImGui::Begin("Example: Simple Overlay", p_open, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
+		{
+			ImGui::Text("Simple overlay\n" "in the corner of the screen.\n" "(right-click to change position)");
+			ImGui::Separator();
+			if (ImGui::IsMousePosValid())
+				ImGui::Text("Mouse Position: (%.1f,%.1f)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
+			else
+				ImGui::Text("Mouse Position: <invalid>");
+			if (ImGui::BeginPopupContextWindow())
+			{
+				if (ImGui::MenuItem("Custom",       NULL, corner == -1)) corner = -1;
+				if (ImGui::MenuItem("Top-left",     NULL, corner == 0)) corner = 0;
+				if (ImGui::MenuItem("Top-right",    NULL, corner == 1)) corner = 1;
+				if (ImGui::MenuItem("Bottom-left",  NULL, corner == 2)) corner = 2;
+				if (ImGui::MenuItem("Bottom-right", NULL, corner == 3)) corner = 3;
+				if (p_open && ImGui::MenuItem("Close")) *p_open = false;
+				ImGui::EndPopup();
+			}
+		}
+		ImGui::End();
 	}
 
 	void show_app_menu_bar()
@@ -158,6 +192,8 @@ private:
 
 				ImGui::Checkbox("Controle", &show_basic_cmd_drone);
 				ImGui::Checkbox("Tracking", &show_color_obj_tracking);
+
+				ImGui::Checkbox("Demo",&show_demo);
 				
 				ImGui::EndMenu();
 			}
@@ -170,19 +206,47 @@ private:
 	{
 		if(show_color_obj_tracking)
 		{
-			static ImVec4 color = ImColor(114, 144, 154, 200);
-			static int values[2]{ 20 , 20 };
-			static float range_low[4];
-			static bool ref_color = false;
-			static ImVec4 ref_color_v(1.0f, 0.0f, 1.0f, 0.5f);
+			static float 	low_color[3];
+			static float 	high_color[3];
+
+			static int		interval_time;
+
+			static int 		size_obj[2]{ 20 , 20 };
+
+			static bool		is_started;
+
+			int misc_flags = ImGuiColorEditFlags_HSV;
+
+
 			ImGui::Begin("Tracking d'object colorer",&show_color_obj_tracking);
 
 			ImGui::TextColored({ 255,255,0,1 }, "Configuration de l'object");
 			ImGui::Separator();
-			ImGui::DragInt2("Dimension (CM)", values);
-			ImGuiColorEditFlags flags;
-			flags|= ImGuiColorEditFlags_HSV;
-			ImGui::ColorPicker4("MyColor##4", (float*)&color, flags, ref_color ? &ref_color_v.x : NULL);
+			ImGui::DragInt2("Dimension (CM)", size_obj);
+
+
+			ImGui::Text("Valeur minimum range");
+			ImGui::ColorEdit3("Minimaum##1", (float*)low_color, misc_flags);
+
+			ImGui::Text("Valeur maximum range");
+			ImGui::ColorEdit3("Maximum##2", (float*)high_color, misc_flags);
+
+			ImGui::DragInt("Interval entre dÃ©tection (MS)",&interval_time,0.5,0,500);
+
+			ImGui::Separator();
+
+			if(is_started) {
+				if (ImGui::Button("Arreter",{ 200,50})){
+					is_started = false;
+				}
+			}
+			else {
+				if (ImGui::Button("Demarrer", {200, 50})) {
+					is_started = true;
+				}
+			}
+
+
 
 			ImGui::End();
 			
@@ -252,7 +316,7 @@ private:
 			ImGui::Begin("Video Staging",&show_vs_info);
 
 			video_staging_info vsi = video_staging.getInfo();
-			strcpy_s(record_folder, vsi.file_name);
+			strcpy(record_folder, vsi.file_name);
 
 			ImGui::TextColored({ 255,255,0,1 }, "Codec");
 			ImGui::Separator();
@@ -270,7 +334,7 @@ private:
 			ImGui::Checkbox("Enregister raw", &record_raw);
 			if (record_raw)
 			{
-				// Démarre l'enregistrement
+				// Dï¿½marre l'enregistrement
 			}
 			if (ImGui::InputText("Dossier enregistrement", record_folder, 100))
 			{
@@ -289,6 +353,8 @@ private:
 		show_log_window();
 		show_drone_basic_command_window();
 		show_color_obj_tracking_window();
+
+		ImGui::ShowDemoWindow(&show_demo);
 	}
 
 	void mainLoop() override
