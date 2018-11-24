@@ -119,6 +119,7 @@ private:
 	bool					show_vs_info = false;
 	bool					show_log = false;
 	bool					show_basic_cmd_drone = true;
+	bool					show_color_obj_tracking = false;
 
 	void show_log_window()
 	{
@@ -130,7 +131,7 @@ private:
 			{
 				log.AddLog(v.c_str());
 			}
-			log.Draw("Logger AR Drone");
+			log.Draw("Logger AR Drone",&show_log);
 		}
 	}
 
@@ -154,6 +155,9 @@ private:
 				ImGui::Checkbox("Navdata", &show_nd);
 				ImGui::Checkbox("Video Staging", &show_vs_info);
 				ImGui::Checkbox("Logger", &show_log);
+
+				ImGui::Checkbox("Controle", &show_basic_cmd_drone);
+				ImGui::Checkbox("Tracking", &show_color_obj_tracking);
 				
 				ImGui::EndMenu();
 			}
@@ -162,11 +166,35 @@ private:
 		
 	}
 
+	void show_color_obj_tracking_window()
+	{
+		if(show_color_obj_tracking)
+		{
+			static ImVec4 color = ImColor(114, 144, 154, 200);
+			static int values[2]{ 20 , 20 };
+			static float range_low[4];
+			static bool ref_color = false;
+			static ImVec4 ref_color_v(1.0f, 0.0f, 1.0f, 0.5f);
+			ImGui::Begin("Tracking d'object colorer",&show_color_obj_tracking);
+
+			ImGui::TextColored({ 255,255,0,1 }, "Configuration de l'object");
+			ImGui::Separator();
+			ImGui::DragInt2("Dimension (CM)", values);
+			ImGuiColorEditFlags flags;
+			flags|= ImGuiColorEditFlags_HSV;
+			ImGui::ColorPicker4("MyColor##4", (float*)&color, flags, ref_color ? &ref_color_v.x : NULL);
+
+			ImGui::End();
+			
+		}
+	}
+
+
 	void show_drone_basic_command_window()
 	{
 		if(show_basic_cmd_drone)
 		{
-			ImGui::Begin("Commande de Base");
+			ImGui::Begin("Commande de Base",&show_basic_cmd_drone);
 
 
 			ImGui::End();
@@ -178,7 +206,7 @@ private:
 	{
 		if (show_nd) {
 			static int range_building[1]{ 0 };
-			ImGui::Begin("Information Navdata");
+			ImGui::Begin("Information Navdata",&show_nd);
 
 			ImGui::TextColored({ 255,255,0,1 }, "Information general");
 			ImGui::Text("Pourcentage Batterie : %d", nd.vbat_flying_percentage);
@@ -221,7 +249,7 @@ private:
 		if (show_vs_info) {
 			static char record_folder[100];
 			static bool record_raw = false;
-			ImGui::Begin("Video Staging");
+			ImGui::Begin("Video Staging",&show_vs_info);
 
 			video_staging_info vsi = video_staging.getInfo();
 			strcpy_s(record_folder, vsi.file_name);
@@ -252,6 +280,7 @@ private:
 			ImGui::End();
 		}
 	}
+	
 	void show_widgets()
 	{
 		show_app_menu_bar();
@@ -259,6 +288,7 @@ private:
 		show_nav_data_window();
 		show_log_window();
 		show_drone_basic_command_window();
+		show_color_obj_tracking_window();
 	}
 
 	void mainLoop() override
