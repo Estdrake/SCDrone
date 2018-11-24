@@ -3,7 +3,7 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
-project ("mvdrone")
+project ("ardrone")
 # Déclare les dépendences de buid
 set(CMAKE_CXX_STANDARD 17)
 
@@ -71,8 +71,13 @@ include_directories(
 link_directories(
 	${LIBAV_LIBRARY_DIR}
 )
+if(WIN32)
+	set ( GL_LIBS opengl32 glew32d glfw3)
+else()
+	set ( GL_LIBS GL GLEW glfw atomic )
+	set ( CMAKE_CXX_FLAGS -march=native)
+endif()
 
-set ( GL_LIBS opengl32 glew32d glfw3)
 set ( LIBAV_LIBS avcodec avutil avformat swscale)
 
 # Include sub-projects.
