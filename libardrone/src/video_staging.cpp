@@ -2,6 +2,8 @@
 #include <iostream>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
+#include <numeric>
+#include "logger.h"
 
 
 typedef std::chrono::high_resolution_clock HRClock;
@@ -14,7 +16,6 @@ VideoStaging::VideoStaging(VFQueue* queue, MQueue* mqueue) : of(), Runnable()
 {
 #ifdef DEBUG_VIDEO_STAGING
 	start_gap = HRClock::now();
-	//qDebug() << "Starting video staging";
 #endif
 	avcodec_register_all();
 	this->queue = queue;
@@ -94,7 +95,7 @@ VideoStaging::VideoStaging(VFQueue* queue, MQueue* mqueue) : of(), Runnable()
 
 	this->staging_info = {
 		 CODEC_MPEG4_AVC, bit_rate, display_width,
-		display_height, 0.0,100,record_to_file_raw, record_folder
+		display_height,0, 0.0,100,record_to_file_raw, record_folder.string().c_str()
 	};
 
 }
@@ -138,9 +139,13 @@ int VideoStaging::init() const
 		std::cerr << "Impossible d'ouvrir le codec" << std::endl;
 		return 1;
 	}
-	// Ouvre le fichier 
-	if(record_folder)
+	// si le dossier n'existe pas on le crée
+	if(fs::exists(record_folder))
 	{
+		if(!fs::create_directory(record_folder))
+		{
+			
+		}
 	}
 #ifdef DEBUG_VIDEO_STAGING
 	auto end = HRClock::now();
@@ -162,6 +167,8 @@ void VideoStaging::run_service()
 			continue;
 #ifdef DEBUG_VIDEO_STAGING
 		if (last_frame != 0 && last_frame + 1 != vf.Header.frame_number) { // on n'a manquer des frames
+			frame_lost += vf.Header.frame_number - last_frame;
+			AR_LOG_WARNING(vf.Header.frame_number - last_frame, " frame lost\n");
 			//qDebug() << "We have lose " << (vf.Header.frame_number - last_frame) << " frames on staging";
 		}
 		last_frame = vf.Header.frame_number;
@@ -181,8 +188,9 @@ void VideoStaging::run_service()
 			//qDebug() << "Average time for 100 frame " << v << "ms";
 			this->staging_info = {
 				CODEC_MPEG4_AVC, bit_rate, display_width,
-				display_height, v,100,record_to_file_raw, record_folder
+				display_height,frame_lost, v,100,record_to_file_raw, record_folder.string().c_str()
 			};
+			frame_lost = 0;
 			times.clear();
 		}
 #endif

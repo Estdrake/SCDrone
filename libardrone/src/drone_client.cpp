@@ -17,6 +17,11 @@ int DroneClient::Start()
 	return stop();
 }
 
+bool DroneClient::isAllThreadRunning()
+{
+	return video_client.isRunning();
+}
+
 int DroneClient::init()
 {
 	if (int ret = video_staging.init(); ret > 0)

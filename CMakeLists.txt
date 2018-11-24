@@ -80,7 +80,5 @@ add_subdirectory("imgui")
 add_subdirectory("libardrone")
 add_subdirectory("libcontrol")
 add_subdirectory("ardrone_gui")
-add_subdirectory("ardrone_utils")
-add_subdirectory("ardrone_test")
 add_subdirectory("ardrone_keyboard")
 

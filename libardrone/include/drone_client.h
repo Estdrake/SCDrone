@@ -34,8 +34,10 @@ public:
 
 	int Start();
 
+	bool isAllThreadRunning();
+
 	virtual void mainLoop() = 0;
-private:
+protected:
 
 	int init();
 	int stop();

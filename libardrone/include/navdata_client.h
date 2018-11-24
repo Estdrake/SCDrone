@@ -20,7 +20,10 @@ class NavDataClient: public Runnable{
         ~NavDataClient();
 
 		navdata_demo_t get_last_nd_demo();
-
+		void stop() override {
+			ios.stop();
+			exitSignal.set_value();
+		}
     private:
 		void init_communication();
 		

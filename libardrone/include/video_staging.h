@@ -20,6 +20,9 @@ extern "C" {
 
 #include <opencv2/core/mat.hpp>
 
+namespace fs = std::filesystem;
+
+
 #define H264_INBUF_SIZE 50000 // Grosseur de mon buffer que j'utilise pour les trames que je recoit
 
 typedef ConcurrentQueue<cv::Mat> MQueue;
@@ -33,7 +36,8 @@ struct video_staging_info
 	int					d_width;
 	int					d_height;
 
-	double					average_decoding_time;
+	int					nbr_frame_missing;
+	double				average_decoding_time;
 	int					nbr_frame_gap;
 	
 	bool				is_recording_raw;
@@ -52,14 +56,13 @@ class VideoStaging : public Runnable
 	int							bit_rate;					// Bit-rate du stream reçu
 	int							fps;						// FPS du stream reçu
 
-	unsigned int				num_picture_decoded = 0;	// Nombre d'image decoder depuis le debut du stream
-	int							average_time = 0;			// Temps moyen pour faire le traitement d'une image
 #ifdef DEBUG_VIDEO_STAGING
+	int								frame_lost = 0;
 	TimePoint						start_gap;
 	TimePoint						end_gap;
 	TimePoint						last_start;
 	TimePoint						last_end;
-	std::vector<long>			times;
+	std::vector<long>				times;
 #endif
 	AVCodec*					codec;						// Contient les informations du codec qu'on utilise (H264)
 	AVCodecContext*				codec_ctx;					// Contient le context de notre codec ( information sur comment decoder le stream )
@@ -86,7 +89,7 @@ class VideoStaging : public Runnable
 	bool						only_idr = true;			// Indique si on souhaite selon parser les frames IDR et de skipper les frames P
 
 	atomic<bool>				record_to_file_raw = false; // Indique si on souhaite sauvegarder le stream dans un fichier
-	const char*					record_folder = nullptr;		// Indique le chemin du fichier a sauvegarder le stream
+	fs::path					record_folder = fs::path("./recording");		// Indique le chemin du fichier a sauvegarder le stream
 	int							stream_index = 0;
 	std::ofstream				of;
 

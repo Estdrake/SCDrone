@@ -1,6 +1,6 @@
 #include "config.h"
 #include "video_client.h"
-
+#include "logger.h"
 #include <thread>
 
 
@@ -38,6 +38,7 @@ void VideoClient::run_service() {
 	vf.Header.frame_number = 0;
 	vf.Got = 0;
 
+	state = true;
 
 	if (socket->waitForConnected(3000)) {
 		while (stopRequested() == false) {
@@ -113,13 +114,16 @@ void VideoClient::run_service() {
 				}
 			}
 			else {
-				qDebug() << "Fail to get data within 3 second";
+				//stop();
 			}
 		}
+		AR_LOG_INFO(1, "Stopping video client\n");
 		qDebug() << "Stopping video client";
 	}
 	else {
-		// Fail de la connection doit envoyer un signal a quelqun ou restart plusieurs fois en boucle
+		AR_LOG_INFO(1, "Fail to connect to video port of drone\n");
 		qDebug() << "Fail to connect to video port of drone";
 	}
+
+	state = false;
 }

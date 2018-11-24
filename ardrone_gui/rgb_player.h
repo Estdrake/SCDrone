@@ -29,7 +29,8 @@ public:
 	{
 
 	}
-	bool setup(int vidW, int vidH) {
+	bool setup(int vidW, int vidH,int winW, int winH) {
+		resize(winW, winH);
 		vid_w = vidW;
 		vid_h = vidH;
 
@@ -37,6 +38,9 @@ public:
 			std::cerr << "Invalid texture size" << std::endl;
 			return false;
 		}
+
+		pos_x = winW / 2 - vidW / 2;
+		pos_y = winH / 2 - vidH / 2;
 
 
 		if (!setupTextures()) {
@@ -66,21 +70,14 @@ public:
 	}
 
 
-	void draw(int x, int y, int w = 0, int h = 0) {
+	void draw() {
 		assert(textures_created == true);
 
-		if (w == 0) {
-			w = vid_w;
-		}
-
-		if (h == 0) {
-			h = vid_h;
-		}
 
 		glBindVertexArray(vao);
 		glUseProgram(prog);
 
-		glUniform4f(u_pos, x, y, w, h);
+		glUniform4f(u_pos, pos_x, pos_y, vid_w, vid_h);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, i_tex);
 		glUniform1i(glGetUniformLocation(prog, "texture"), 0);
@@ -156,6 +153,8 @@ private:
 	}
 
 public:
+	int pos_x;
+	int pos_y;
 	int vid_w;
 	int vid_h;
 	int win_w;

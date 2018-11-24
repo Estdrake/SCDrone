@@ -24,8 +24,11 @@ enum ar_drone_workers {
 };
 
 class Runnable {
-	std::promise<void> exitSignal;
-	std::future<void> futureObject;
+protected:
+	std::promise<void>	exitSignal;
+	std::future<void>	futureObject;
+
+	std::atomic<bool>	state = false;
 
 public:
 	virtual ~Runnable() = default;
@@ -53,8 +56,13 @@ public:
 		return !(futureObject.wait_for(0ms) == std::future_status::timeout);
 	}
 
-	void stop() {
+	virtual void stop() {
 		exitSignal.set_value();
+	}
+
+	bool isRunning()
+	{
+		return state;
 	}
 
 };

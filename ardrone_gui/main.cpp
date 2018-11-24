@@ -15,10 +15,76 @@
 #include "rgb_player.h"
 #include "imgui_internal.h"
 
+#include "logger.h"
+
 static void glfw_error_callback(int error, const char* description)
 {
 	std::cerr << "GLFW Error " << error << " : " << description << std::endl;
 }
+
+struct ExampleAppLog
+{
+	ImGuiTextBuffer     Buf;
+	ImGuiTextFilter     Filter;
+	ImVector<int>       LineOffsets;        // Index to lines offset
+	bool                ScrollToBottom;
+
+	void    Clear() { Buf.clear(); LineOffsets.clear(); }
+
+	void    AddLog(const char* fmt, ...) IM_FMTARGS(2)
+	{
+		int old_size = Buf.size();
+		va_list args;
+		va_start(args, fmt);
+		Buf.appendfv(fmt, args);
+		va_end(args);
+		for (int new_size = Buf.size(); old_size < new_size; old_size++)
+			if (Buf[old_size] == '\n')
+				LineOffsets.push_back(old_size);
+		ScrollToBottom = true;
+	}
+
+	void    Draw(const char* title, bool* p_open = NULL)
+	{
+		ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+		if (!ImGui::Begin(title, p_open))
+		{
+			ImGui::End();
+			return;
+		}
+		if (ImGui::Button("Clear")) Clear();
+		ImGui::SameLine();
+		bool copy = ImGui::Button("Copy");
+		ImGui::SameLine();
+		Filter.Draw("Filter", -100.0f);
+		ImGui::Separator();
+		ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+		if (copy) ImGui::LogToClipboard();
+
+		if (Filter.IsActive())
+		{
+			const char* buf_begin = Buf.begin();
+			const char* line = buf_begin;
+			for (int line_no = 0; line != NULL; line_no++)
+			{
+				const char* line_end = (line_no < LineOffsets.Size) ? buf_begin + LineOffsets[line_no] : NULL;
+				if (Filter.PassFilter(line, line_end))
+					ImGui::TextUnformatted(line, line_end);
+				line = line_end && line_end[1] ? line_end + 1 : NULL;
+			}
+		}
+		else
+		{
+			ImGui::TextUnformatted(Buf.begin());
+		}
+
+		if (ScrollToBottom)
+			ImGui::SetScrollHere(1.0f);
+		ScrollToBottom = false;
+		ImGui::EndChild();
+		ImGui::End();
+	}
+};
 
 
 class DroneKB : public DroneClient
@@ -35,6 +101,8 @@ public:
 
 private:
 
+	bool					are_thread_running = true;
+
 	cv::Mat					last_mat;
 	cv::Mat					presentation_mat;
 
@@ -46,27 +114,151 @@ private:
 	RGBGL_Player			player;
 	GLFWwindow*				window;
 
-	
 
-	void displayCurrentInfo(int noise)
+	bool					show_nd = true;
+	bool					show_vs_info = false;
+	bool					show_log = false;
+	bool					show_basic_cmd_drone = true;
+
+	void show_log_window()
 	{
-		std::stringstream ss;
-		ss << "Battery " << nd.vbat_flying_percentage << "% " << "Altitude " << nd.altitude << " Phi " << nd.phi/1000 << " Theta " << nd.theta/1000 << " Psi " << nd.psi/1000;
-		cv::putText(presentation_mat, ss.str(), cv::Point(30, 30), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(0, 0, 255), 1);
-		ss = std::stringstream();
-		ss << "Velocity X " << nd.vx << " Y " << nd.vy << " Z " << nd.vz;
-		cv::putText(presentation_mat, ss.str(), cv::Point(30, 60), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(0, 0, 255), 1);
-		ss = std::stringstream();
-		ss << "Image noise " << noise;
-		cv::putText(presentation_mat, ss.str(), cv::Point(30, 90), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(0, 0, 255), 1);
-		ss = std::stringstream();
-		ss << "Speed XZ " << speedXZ << " Speed YR " << speedYR;
-		cv::putText(presentation_mat, ss.str(), cv::Point(30, 330), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(0, 0, 255), 1);
+		if(show_log)
+		{
+			static ExampleAppLog log;
+
+			for(auto v : logger.Consume())
+			{
+				log.AddLog(v.c_str());
+			}
+			log.Draw("Logger AR Drone");
+		}
 	}
 
-	void generate_gui()
+	void show_app_menu_bar()
 	{
 		
+		if(ImGui::BeginMainMenuBar())
+		{
+			if(ImGui::BeginMenu("Fichier"))
+			{
+				ImGui::Separator();
+				if(ImGui::MenuItem("Quitter", "Alt+F4"))
+				{
+					std::cout << "Quitting" << std::endl;
+				}
+				ImGui::EndMenu();
+			}
+
+			if(ImGui::BeginMenu("Fenetre"))
+			{
+				ImGui::Checkbox("Navdata", &show_nd);
+				ImGui::Checkbox("Video Staging", &show_vs_info);
+				ImGui::Checkbox("Logger", &show_log);
+				
+				ImGui::EndMenu();
+			}
+			ImGui::EndMainMenuBar();
+		}
+		
+	}
+
+	void show_drone_basic_command_window()
+	{
+		if(show_basic_cmd_drone)
+		{
+			ImGui::Begin("Commande de Base");
+
+
+			ImGui::End();
+		}
+		
+	}
+
+	void show_nav_data_window()
+	{
+		if (show_nd) {
+			static int range_building[1]{ 0 };
+			ImGui::Begin("Information Navdata");
+
+			ImGui::TextColored({ 255,255,0,1 }, "Information general");
+			ImGui::Text("Pourcentage Batterie : %d", nd.vbat_flying_percentage);
+			ImGui::Text("Etat actuelle : %s", nd.ctrl_state & ARDRONE_FLY_MASK ? "FLYING" : "LANDED");
+			ImGui::Separator();
+			ImGui::TextColored({ 255,255,0,1 }, "Information de vol");
+
+			ImGui::Text("Altitude : %d", nd.altitude);
+			ImGui::Text("Phi : %.2f  Theta : %.2f  Psi : %.2f", nd.phi / 1000.0f, nd.theta / 1000.0f, nd.psi / 1000.0f);
+			ImGui::Text("Velociter X : %.2f Y : %.2f", nd.vx, nd.vy);
+
+			if (ImGui::Button("Urgence"))
+			{
+				at_client.set_ref(EMERGENCY_FLAG);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Calibrage au sol"))
+			{
+				at_queue.push(at_format_ftrim());
+
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Calibrage en vol"))
+			{
+				if (at_client.get_ref() == "FLYING") {
+					at_queue.push(at_format_calib(0));
+				}
+				else
+				{
+					AR_LOG_ERROR(0, "Le drone doit etre en vol\n");
+				}
+			}
+
+			ImGui::End();
+		}
+	}
+
+	void show_video_staging_info_window()
+	{
+		if (show_vs_info) {
+			static char record_folder[100];
+			static bool record_raw = false;
+			ImGui::Begin("Video Staging");
+
+			video_staging_info vsi = video_staging.getInfo();
+			strcpy_s(record_folder, vsi.file_name);
+
+			ImGui::TextColored({ 255,255,0,1 }, "Codec");
+			ImGui::Separator();
+			ImGui::Text("Codec : %s", (vsi.codec == CODEC_MPEG4_AVC) ? "MPEG4 AVC" : "");
+			ImGui::Text("Bit rate : %d", vsi.bit_rate);
+			ImGui::Text("Grosseur : %d x %d", vsi.d_width, vsi.d_width, vsi.d_height);
+			ImGui::Separator();
+			ImGui::TextColored({ 255,255,0,1 }, "Performance");
+			ImGui::Separator();
+			ImGui::Text("Interval de %d frames Temps moyens : %g ms Frames perdues : %d", vsi.nbr_frame_gap, vsi.average_decoding_time,vsi.nbr_frame_missing);
+			ImGui::Spacing();
+			ImGui::Separator();
+			ImGui::TextColored({ 255,255,0,1 }, "Enregistrement");
+			ImGui::Separator();
+			ImGui::Checkbox("Enregister raw", &record_raw);
+			if (record_raw)
+			{
+				// Démarre l'enregistrement
+			}
+			if (ImGui::InputText("Dossier enregistrement", record_folder, 100))
+			{
+			}
+
+
+			ImGui::End();
+		}
+	}
+	void show_widgets()
+	{
+		show_app_menu_bar();
+		show_video_staging_info_window();
+		show_nav_data_window();
+		show_log_window();
+		show_drone_basic_command_window();
 	}
 
 	void mainLoop() override
@@ -90,74 +282,17 @@ private:
 				player.setPixels(last_mat);
 			}
 
-
 			ImGui_ImplOpenGL3_NewFrame();
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-			//###################
-			// GUI Navdata
-			//###################
-			{
-				static int range_building[1]{ 0 };
-				ImGui::Begin("Information Navdata");
-				
-				ImGui::TextColored({ 255,255,0,1 }, "Information general");
-				ImGui::Text("Pourcentage Batterie : %d", nd.vbat_flying_percentage);
-				ImGui::Text("Etat actuelle : %s",nd.ctrl_state & ARDRONE_FLY_MASK ? "FLYING" : "LANDED");
-				ImGui::Separator();
-				ImGui::TextColored({255,255,0,1}, "Information de vol");
-
-				ImGui::Text("Altitude : %d", nd.altitude);
-				ImGui::Text("Phi : %.2f  Theta : %.2f  Psi : %.2f",nd.phi/1000.0f, nd.theta/1000.0f, nd.psi/1000.0f);
-
-				ImGui::End();
-			}
-			//###################
-			// GUI Video Staging
-			//###################
-			{
-				static char record_folder[100];
-				static bool record_raw = false;
-				ImGui::Begin("Video Staging");
-
-				video_staging_info vsi = video_staging.getInfo();
-				strcpy_s(record_folder, vsi.file_name);
-
-				ImGui::TextColored({ 255,255,0,1 }, "Codec");
-				ImGui::Separator();
-				ImGui::Text("Codec : %s", (vsi.codec == CODEC_MPEG4_AVC) ? "MPEG4 AVC" : "");
-				ImGui::Text("Bit rate : %d", vsi.bit_rate);
-				ImGui::Text("Grosseur : %d x %d", vsi.d_width, vsi.d_width, vsi.d_height);
-				ImGui::Separator();
-				ImGui::TextColored({ 255,255,0,1 }, "Performance");
-				ImGui::Separator();
-				ImGui::Text("Temps moyen decoder %d frames : %g ms", vsi.nbr_frame_gap, vsi.average_decoding_time);
-				ImGui::Spacing();
-				ImGui::Separator();
-				ImGui::TextColored({ 255,255,0,1 }, "Enregistrement");
-				ImGui::Separator();
-				ImGui::Checkbox("Enregister raw", &record_raw);
-				if(record_raw)
-				{
-					// Démarre l'enregistrement
-				}
-				if(ImGui::InputText("Dossier enregistrement", record_folder, 100))
-				{
-					std::cout << "Text change " << record_folder << std::endl;
-				}
-
-
-				ImGui::End();
-			}
-
-
+			show_widgets();
 
 			presentation_mat = last_mat.clone();
 
-			player.draw(0, 0);
+			player.draw();
 
 			ImGui::Render();
 			int display_w, display_h;
@@ -221,9 +356,9 @@ public:
 		glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
 
 
-		if(!player.setup(640,360))
+		if(!player.setup(640,360,1600,900))
 		{
-			printf("Echec configuration du lecteur video opengl\n");
+			AR_LOG_ERROR(0, "Echec de la configuration du lecteur video");
 			return false;
 		}
 
