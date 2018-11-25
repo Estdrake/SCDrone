@@ -3,7 +3,7 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
-project ("ardrone")
+project ("ardrone" CXX)
 # Déclare les dépendences de buid
 set(CMAKE_CXX_STANDARD 17)
 
@@ -42,6 +42,7 @@ include_directories(
 	${GLEW_INCLUDE_PATH}
 	${GLFW_INCLUDE_PATH}
 	${GLM_INCLUDE_PATH}
+        libutils
 )
 #add_definitions(-DWITH_STB_IMAGE)
 
@@ -66,6 +67,7 @@ include_directories(
 	${LIBAV_INCLUDE_DIR}
 	${ASIO_INCLUDE_DIR}
 	${QT_INCLUDES}
+	./libutils
 )
 
 link_directories(
@@ -84,7 +86,6 @@ set ( LIBAV_LIBS avcodec avutil avformat swscale)
 add_subdirectory("imgui")
 add_subdirectory("libardrone")
 add_subdirectory("libcontrol")
-add_subdirectory("libutils")
 add_subdirectory("ardrone_gui")
 add_subdirectory("ardrone_keyboard")
 

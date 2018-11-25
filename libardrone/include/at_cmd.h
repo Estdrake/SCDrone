@@ -1,6 +1,7 @@
 #ifndef AP_CMD_H
 #define AP_CMD_H
 #include <string>
+#include <cassert>
 
 static const char* AT_REF = "AT*REF=$seq,%d\r";
 static const char* AT_PMODE = "AT*PMODE=%d,%d\r";
