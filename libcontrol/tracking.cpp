@@ -2,12 +2,27 @@
 //
 
 #include "tracking.h"
+#include "filter.h"
 
 using namespace std;
 
 
-void DoStuff() {
-	cout << "Doing stuff" << endl;
+
+bool SimpleObjectTracker::addImage(cv::Mat& miam)
+{
+	int n = get_image_noise_level(miam);
+	if(n < current_noise)
+	{
+		best_image = miam;
+		current_noise = n;
+	}
+	return false;
+}
+
+cv::Mat SimpleObjectTracker::getBestThreshOutput()
+{
+	cv::Mat m;
+	return m;
 }
 
 void traitementImage(const cv::Mat& frame,Mat &retour)

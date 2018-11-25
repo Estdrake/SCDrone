@@ -8,5 +8,5 @@ int get_image_noise_level(const cv::Mat& o)
 	cv::Laplacian(g, lap, CV_64F);
 	Scalar mean, stddev;
 	meanStdDev(lap, mean, stddev, Mat());
-	return stddev.val[0] * stddev.val[0];
+	return static_cast<int>(stddev.val[0] * stddev.val[0]);
 }
