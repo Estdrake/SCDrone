@@ -68,6 +68,17 @@ public:
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, vid_w, vid_h, GL_BGR, GL_UNSIGNED_BYTE, m.ptr());
 
 	}
+	void setPixels2(cv::Mat& m )
+	{
+		glBindTexture(GL_TEXTURE_2D, i2_tex);
+		//use fast 4-byte alignment (default anyway) if possible
+		//glPixelStorei(GL_UNPACK_ALIGNMENT, (m.step & 3) ? 1 : 4);
+
+		//set length of one complete row in data (doesn't need to equal image.cols)
+		glPixelStorei(GL_UNPACK_ROW_LENGTH, m.step / m.elemSize());
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, vid_w, vid_h, GL_BGR, GL_UNSIGNED_BYTE, m.ptr());
+
+	}
 
 
 	void draw() {
@@ -83,6 +94,22 @@ public:
 		glUniform1i(glGetUniformLocation(prog, "texture"), 0);
 
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+
+	}
+
+	void draw2()
+	{
+		glBindVertexArray(vao);
+		glUseProgram(prog);
+
+		glUniform4f(u_pos, 0, 0, vid_w, vid_h);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, i2_tex);
+		glUniform1i(glGetUniformLocation(prog, "texture"), 0);
+
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
 	}
 	void resize(int winW, int winH) {
 		assert(winW > 0 && winH > 0);
@@ -122,6 +149,23 @@ private:
 			GL_UNSIGNED_BYTE,  // Image data type
 			NULL);        // The actual image data itself
 
+		glGenTextures(1, &i2_tex);
+		glBindTexture(GL_TEXTURE_2D, i2_tex);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+		glTexImage2D(GL_TEXTURE_2D,     // Type of texture
+			0,                 // Pyramid level (for mip-mapping) - 0 is the top level
+			GL_RGB,            // Internal colour format to convert to
+			vid_w,          // Image width  i.e. 640 for Kinect in standard mode
+			vid_h,          // Image height i.e. 480 for Kinect in standard mode
+			0,                 // Border width in pixels (can either be 1 or 0)
+			GL_BGR, // Input image format (i.e. GL_RGB, GL_RGBA, GL_BGR etc.)
+			GL_UNSIGNED_BYTE,  // Image data type
+			NULL);        // The actual image data itself
 		textures_created = true;
 		return true;
 	}
@@ -151,8 +195,6 @@ private:
 
 		return true;
 	}
-
-public:
 	int pos_x;
 	int pos_y;
 	int vid_w;

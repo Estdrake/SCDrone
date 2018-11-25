@@ -18,6 +18,36 @@
 
 typedef ConcurrentQueue<std::string> ATQueue;
 
+enum x_direction
+{
+	LEFT,
+	RIGHT,
+	NONE_X
+};
+
+enum y_direction
+{
+	HIGHER,
+	LOWER,
+	NONE_Y
+};
+
+enum z_direction
+{
+	FORWARD,
+	BACKWARD,
+	NONE_Z
+};
+
+struct speed
+{
+	float x;
+	float y;
+	float z;
+	float r;
+};
+
+
 class ATClient : public QObject, public Runnable
 {
 	ATQueue* queue;
@@ -27,17 +57,40 @@ class ATClient : public QObject, public Runnable
 	QHostAddress* sender;
 	quint16 port;
 
-	std::atomic<ref_flags> ref_mode;
+	std::atomic<ref_flags>			ref_mode;
+	std::atomic<progressive_flags>	prog_flag;
+	std::atomic<speed>				speed_drone;
 
 	int sequence_nbr;
 
 public:
 	ATClient(ATQueue* queue,QObject* parent = 0);
 	~ATClient();
+	
+	void setSpeedX(x_direction d, float x);
+	void setSpeedY(y_direction d, float y);
+	void setSpeedZ(z_direction d, float z);
+	void setSpeedR(x_direction d, float r);
+
+	void hover();
+
+	void setProgressiveFlag(progressive_flags f)
+	{
+		prog_flag = f;
+	}
+
+	speed getSpeed() const
+	{
+		return speed_drone;
+	}
+	progressive_flags getProgressiveFlag() const
+	{
+		return prog_flag;
+	}
 
 	void set_ref(ref_flags f);
 
-	const char* get_ref()
+	const char* get_ref() const
 	{
 		ref_flags f = ref_mode;
 		switch(f)
@@ -60,24 +113,6 @@ public slots:
 
 private slots:
 	void on_read_ready();
-};
-
-enum x_direction
-{
-	LEFT,
-	RIGHT
-};
-
-enum y_direction
-{
-	HIGHER,
-	LOWER
-};
-
-enum z_direction
-{
-	FORWARD,
-	BACKWARD
 };
 
 class DroneControl

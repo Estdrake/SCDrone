@@ -15,6 +15,8 @@ ATClient::ATClient(ATQueue* queue, QObject* parent) : QObject(parent), ref_mode(
 	this->sender = new QHostAddress(WIFI_ARDRONE_IP);
 	this->port = AT_PORT;
 	this->sequence_nbr = 1;
+	this->speed_drone = { 0,0,0,0 };
+	this->prog_flag = HOVERING;
 	this->socket = new QUdpSocket(this);
 	this->socket->bind(QHostAddress(WIFI_CLIENT_IP), port);
 	connect(socket, &QUdpSocket::readyRead, this, &ATClient::on_read_ready);
@@ -24,7 +26,49 @@ ATClient::~ATClient()
 {
 	delete this->socket;
 	delete this->sender;
-};
+}
+
+void ATClient::setSpeedX(x_direction d, float x)
+{
+	if (d == LEFT)
+		x *= -1.0f;
+	speed s = speed_drone;
+	s.x = x;
+	speed_drone = s;
+}
+
+void ATClient::setSpeedY(y_direction d, float y)
+{
+	if (d == LOWER)
+		y *= -1.0f;
+	speed s = speed_drone;
+	s.y = y;
+	speed_drone = s;
+}
+
+void ATClient::setSpeedZ(z_direction d, float z)
+{
+	if (d == FORWARD)
+		z *= -1.0f;
+	speed s = speed_drone;
+	s.z = z;
+	speed_drone = s;
+}
+
+void ATClient::setSpeedR(x_direction d, float r)
+{
+	if (d == LEFT)
+		r *= -1.0f;
+	speed s = speed_drone;
+	s.r = r;
+	speed_drone = s;
+}
+
+void ATClient::hover()
+{
+	speed_drone = { 0,0,0,0 };
+	prog_flag = HOVERING;
+}
 
 void ATClient::set_ref(ref_flags f)
 {
@@ -44,7 +88,8 @@ void ATClient::run_service()
 		c = queue->pop_wait(std::chrono::milliseconds(20), &has_data);
 		if (!has_data)
 		{
-			c = at_format_pcmd(HOVERING, 0, 0, 0, 0);
+			speed s = speed_drone;
+			c = at_format_pcmd(prog_flag, s.x, s.z, s.y, s.r);
 		}
 		cmd.push_back(c);
 		cmd.push_back(at_format_ref(this->ref_mode.load()));

@@ -16,6 +16,7 @@
 #include "imgui_internal.h"
 
 #include "logger.h"
+#include "tracking.h"
 
 // NEED overlay avec les metrics de la boucle principal et de GLFW
 
@@ -117,13 +118,21 @@ private:
 	GLFWwindow*				window;
 
 
+	bool					run_main_loop = true;
+
 	bool					show_nd = true;
 	bool					show_vs_info = false;
 	bool					show_log = false;
-	bool					show_basic_cmd_drone = false;
+	bool					show_basic_cmd_drone = true;
 	bool					show_color_obj_tracking = true;
 
-	bool					show_demo = false;
+	bool					show_info_overlay = true;
+
+
+	bool					show_manual_control = true;
+	bool					enable_manual_control = false;
+	bool					enable_tracking_video = false;
+	speed					speed_drone = { 0.2f,0.4f,0.2f,0.4f };
 
 	void show_log_window()
 	{
@@ -141,27 +150,18 @@ private:
 
 	void show_metric_overlay(bool* p_open) {
 		const float DISTANCE = 10.0f;
-		static int corner = 0;
+		static int corner = 3;
 		ImVec2 window_pos = ImVec2((corner & 1) ? ImGui::GetIO().DisplaySize.x - DISTANCE : DISTANCE, (corner & 2) ? ImGui::GetIO().DisplaySize.y - DISTANCE : DISTANCE);
 		ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
 		if (corner != -1)
 			ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
 		ImGui::SetNextWindowBgAlpha(0.3f); // Transparent background
-		if (ImGui::Begin("Example: Simple Overlay", p_open, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
+		if (ImGui::Begin("Information Application", p_open, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
 		{
-			ImGui::Text("Simple overlay\n" "in the corner of the screen.\n" "(right-click to change position)");
-			ImGui::Separator();
-			if (ImGui::IsMousePosValid())
-				ImGui::Text("Mouse Position: (%.1f,%.1f)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
-			else
-				ImGui::Text("Mouse Position: <invalid>");
+			ImGuiIO& io = ImGui::GetIO();
+			ImGui::Text("Version : %d:%d:%d \n" "Framerate %.2f DeltaTime %.2f",0,0,1,io.Framerate,io.DeltaTime);
 			if (ImGui::BeginPopupContextWindow())
 			{
-				if (ImGui::MenuItem("Custom",       NULL, corner == -1)) corner = -1;
-				if (ImGui::MenuItem("Top-left",     NULL, corner == 0)) corner = 0;
-				if (ImGui::MenuItem("Top-right",    NULL, corner == 1)) corner = 1;
-				if (ImGui::MenuItem("Bottom-left",  NULL, corner == 2)) corner = 2;
-				if (ImGui::MenuItem("Bottom-right", NULL, corner == 3)) corner = 3;
 				if (p_open && ImGui::MenuItem("Close")) *p_open = false;
 				ImGui::EndPopup();
 			}
@@ -179,7 +179,7 @@ private:
 				ImGui::Separator();
 				if(ImGui::MenuItem("Quitter", "Alt+F4"))
 				{
-					std::cout << "Quitting" << std::endl;
+					run_main_loop = false;
 				}
 				ImGui::EndMenu();
 			}
@@ -190,10 +190,10 @@ private:
 				ImGui::Checkbox("Video Staging", &show_vs_info);
 				ImGui::Checkbox("Logger", &show_log);
 
-				ImGui::Checkbox("Controle", &show_basic_cmd_drone);
+				ImGui::Checkbox("Commande", &show_basic_cmd_drone);
+				ImGui::Checkbox("Controle", &show_manual_control);
 				ImGui::Checkbox("Tracking", &show_color_obj_tracking);
 
-				ImGui::Checkbox("Demo",&show_demo);
 				
 				ImGui::EndMenu();
 			}
@@ -238,11 +238,13 @@ private:
 			if(is_started) {
 				if (ImGui::Button("Arreter",{ 200,50})){
 					is_started = false;
+					enable_tracking_video = false;
 				}
 			}
 			else {
 				if (ImGui::Button("Demarrer", {200, 50})) {
 					is_started = true;
+					enable_tracking_video = true;
 				}
 			}
 
@@ -253,13 +255,37 @@ private:
 		}
 	}
 
-
 	void show_drone_basic_command_window()
 	{
 		if(show_basic_cmd_drone)
 		{
 			ImGui::Begin("Commande de Base",&show_basic_cmd_drone);
+			if (ImGui::Button("Urgence",{150,50}))
+			{
+				at_client.set_ref(EMERGENCY_FLAG);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Calibrage au sol",{150,50}))
+			{
+				at_queue.push(at_format_ftrim());
 
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Calibrage en vol",{150,50}))
+			{
+				if (at_client.get_ref() == "FLYING") {
+					at_queue.push(at_format_calib(0));
+				}
+				else
+				{
+					AR_LOG_ERROR(0, "Le drone doit etre en vol\n");
+				}
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Changer camera", { 150,50 }))
+			{
+				// TODO permettre changer de caméra 
+			}
 
 			ImGui::End();
 		}
@@ -282,28 +308,7 @@ private:
 			ImGui::Text("Phi : %.2f  Theta : %.2f  Psi : %.2f", nd.phi / 1000.0f, nd.theta / 1000.0f, nd.psi / 1000.0f);
 			ImGui::Text("Velociter X : %.2f Y : %.2f", nd.vx, nd.vy);
 
-			if (ImGui::Button("Urgence"))
-			{
-				at_client.set_ref(EMERGENCY_FLAG);
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Calibrage au sol"))
-			{
-				at_queue.push(at_format_ftrim());
-
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Calibrage en vol"))
-			{
-				if (at_client.get_ref() == "FLYING") {
-					at_queue.push(at_format_calib(0));
-				}
-				else
-				{
-					AR_LOG_ERROR(0, "Le drone doit etre en vol\n");
-				}
-			}
-
+		
 			ImGui::End();
 		}
 	}
@@ -344,7 +349,32 @@ private:
 			ImGui::End();
 		}
 	}
-	
+
+	void show_manual_control_window()
+	{
+		if (show_manual_control) {
+			ImGui::Begin("Control manuel",&show_manual_control);
+
+			ImGui::TextColored({ 255,255,0,1 }, "Parametre");
+
+			ImGui::DragFloat("Vitesse X ", &speed_drone.x, 0.01, 0, 1);
+			ImGui::DragFloat("Vitesse Y ", &speed_drone.y, 0.01, 0, 1);
+			ImGui::DragFloat("Vitesse Z ", &speed_drone.z, 0.01, 0, 1);
+			ImGui::DragFloat("Vitesse R ", &speed_drone.r, 0.01, 0, 1);
+
+			ImGui::Separator();
+			if(ImGui::Checkbox("Demarrer ",&enable_manual_control))
+			{
+				if(!enable_manual_control)
+				{
+					// quand on l'arrete on s'assure que le drone atterisse
+					at_client.set_ref(LAND_FLAG);
+				}
+			}
+			ImGui::End();
+		}
+	}
+
 	void show_widgets()
 	{
 		show_app_menu_bar();
@@ -353,8 +383,152 @@ private:
 		show_log_window();
 		show_drone_basic_command_window();
 		show_color_obj_tracking_window();
+		show_metric_overlay(&show_info_overlay);
+		show_manual_control_window();
+	}
 
-		ImGui::ShowDemoWindow(&show_demo);
+	void manual_control_keyboard()
+	{
+		static bool is_pressed[8];
+		ImGuiIO& io = ImGui::GetIO();
+		if (io.KeysDown[GLFW_KEY_TAB])
+		{
+			at_client.hover();
+		}
+		if (io.KeysDown[GLFW_KEY_ENTER])
+		{
+			at_client.set_ref(TAKEOFF_FLAG);
+		}
+		if (io.KeysDown[GLFW_KEY_BACKSPACE])
+		{
+			at_client.set_ref(LAND_FLAG);
+		}
+		if (io.KeysDown[GLFW_KEY_A]) {
+			if(!is_pressed[0])
+			{
+				at_client.setProgressiveFlag(PROGRESSIVE);
+				at_client.setSpeedX(LEFT, speed_drone.x);
+				is_pressed[0] = true;
+			}
+		} else
+		{
+			if(is_pressed[0])
+			{
+				at_client.setSpeedX(NONE_X, 0.0f);
+				is_pressed[0] = false;
+			}
+		}
+		if (io.KeysDown[GLFW_KEY_W]) {
+			if(!is_pressed[1])
+			{
+				at_client.setProgressiveFlag(PROGRESSIVE);
+				at_client.setSpeedZ(FORWARD, speed_drone.z);
+				is_pressed[1] = true;
+			}
+		} else
+		{
+			if(is_pressed[1])
+			{
+				at_client.setSpeedZ(NONE_Z, 0.0f);
+				is_pressed[1] = false;
+			}
+		}
+		if (io.KeysDown[GLFW_KEY_S]) {
+			if(!is_pressed[2])
+			{
+				at_client.setProgressiveFlag(PROGRESSIVE);
+				at_client.setSpeedZ(BACKWARD, speed_drone.z);
+				is_pressed[2] = true;
+			}
+		} else
+		{
+			if(is_pressed[2])
+			{
+				at_client.setSpeedZ(NONE_Z, 0.0f);
+				is_pressed[2] = false;
+			}
+		}
+		if (io.KeysDown[GLFW_KEY_D]) {
+			if(!is_pressed[3])
+			{
+				at_client.setProgressiveFlag(PROGRESSIVE);
+				at_client.setSpeedX(RIGHT, speed_drone.x);
+				is_pressed[3] = true;
+			}
+		} else
+		{
+			if(is_pressed[3])
+			{
+				at_client.setSpeedX(NONE_X, 0.0f);
+				is_pressed[3] = false;
+			}
+		}
+		if (io.KeysDown[GLFW_KEY_Q])
+		{
+			if(!is_pressed[4])
+			{
+				at_client.setProgressiveFlag(COMBINED_YAW);
+				at_client.setSpeedR(LEFT, speed_drone.z);
+				is_pressed[4] = true;
+			}
+		} else
+		{
+			if(is_pressed[4])
+			{
+				at_client.setSpeedR(NONE_X, 0.0f);
+				is_pressed[4] = false;
+			}
+		}
+		if (io.KeysDown[GLFW_KEY_E])
+		{
+			if (!is_pressed[5])
+			{
+				at_client.setProgressiveFlag(COMBINED_YAW);
+				at_client.setSpeedR(RIGHT, speed_drone.z);
+				is_pressed[5] = true;
+			}
+		} else
+		{
+			if (is_pressed[5])
+			{
+				at_client.setSpeedR(NONE_X, 0.0f);
+				is_pressed[5] = false;
+			}
+		}
+		if (io.KeysDown[GLFW_KEY_O])
+		{
+			if (!is_pressed[6])
+			{
+				at_client.setProgressiveFlag(COMBINED_YAW);
+				at_client.setSpeedY(LOWER, speed_drone.y);
+				is_pressed[5] = true;
+			}
+		}
+		else
+		{
+			if (is_pressed[6])
+			{
+				at_client.setSpeedY(NONE_Y, 0.0f);
+				is_pressed[6] = false;
+			}
+		}
+		if (io.KeysDown[GLFW_KEY_P])
+		{
+			if (!is_pressed[7])
+			{
+				at_client.setProgressiveFlag(COMBINED_YAW);
+				at_client.setSpeedY(HIGHER, speed_drone.y);
+				is_pressed[7] = true;
+			}
+		}
+		else
+		{
+			if (is_pressed[7])
+			{
+				at_client.setSpeedY(NONE_Y, 0.0f);
+				is_pressed[7] = false;
+			}
+		}
 	}
 
 	void mainLoop() override
@@ -369,7 +543,7 @@ private:
 		navconf.append(at_format_ack());
 		at_queue.push(navconf);
 
-		while (!glfwWindowShouldClose(window))
+		while (!glfwWindowShouldClose(window) && run_main_loop)
 		{
 			m = mat_queue.pop2_wait(10ms,&has_image);
 			nd = nd_client.get_last_nd_demo();
@@ -384,12 +558,27 @@ private:
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-			show_widgets();
 
-			presentation_mat = last_mat.clone();
+
+			if (enable_tracking_video) {
+				//int v = get_image_noise_level(last_mat);
+				uint tex;
+				cv::Mat b;
+				traitementImage(last_mat, b);
+				cv::cvtColor(b, presentation_mat, cv::COLOR_GRAY2BGR);
+				//imshow("lol", b);
+				player.setPixels2(presentation_mat);
+				player.draw2();
+			}
 
 			player.draw();
 
+
+			show_widgets();
+			
+			if (enable_manual_control)
+				manual_control_keyboard();
+			
 			ImGui::Render();
 			int display_w, display_h;
 			glfwMakeContextCurrent(window);
@@ -404,6 +593,8 @@ private:
 
 			glfwPollEvents();
 		}
+
+		glfwTerminate();
 	}
 
 public:
