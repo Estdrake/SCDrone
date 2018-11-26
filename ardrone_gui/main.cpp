@@ -10,6 +10,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "imgui_other.h"
 
 #include "filter.h"
 #include "rgb_player.h"
@@ -17,80 +18,19 @@
 
 #include "logger.h"
 #include "tracking.h"
+#include "chrono.h"
 
 
-// NEED overlay avec les metrics de la boucle principal et de GLFW
+static cv::Scalar toU8C3(const float* data)
+{
+	return { data[2] * 255.0f,data[1] * 255.0f,data[0] * 255.0f };
+}
+
 
 static void glfw_error_callback(int error, const char* description)
 {
 	std::cerr << "GLFW Error " << error << " : " << description << std::endl;
 }
-
-struct ExampleAppLog
-{
-	ImGuiTextBuffer     Buf;
-	ImGuiTextFilter     Filter;
-	ImVector<int>       LineOffsets;        // Index to lines offset
-	bool                ScrollToBottom;
-
-	void    Clear() { Buf.clear(); LineOffsets.clear(); }
-
-	void    AddLog(const char* fmt, ...) IM_FMTARGS(2)
-	{
-		int old_size = Buf.size();
-		va_list args;
-		va_start(args, fmt);
-		Buf.appendfv(fmt, args);
-		va_end(args);
-		for (int new_size = Buf.size(); old_size < new_size; old_size++)
-			if (Buf[old_size] == '\n')
-				LineOffsets.push_back(old_size);
-		ScrollToBottom = true;
-	}
-
-	void    Draw(const char* title, bool* p_open = NULL)
-	{
-		ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
-		if (!ImGui::Begin(title, p_open))
-		{
-			ImGui::End();
-			return;
-		}
-		if (ImGui::Button("Clear")) Clear();
-		ImGui::SameLine();
-		bool copy = ImGui::Button("Copy");
-		ImGui::SameLine();
-		Filter.Draw("Filter", -100.0f);
-		ImGui::Separator();
-		ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
-		if (copy) ImGui::LogToClipboard();
-
-		if (Filter.IsActive())
-		{
-			const char* buf_begin = Buf.begin();
-			const char* line = buf_begin;
-			for (int line_no = 0; line != NULL; line_no++)
-			{
-				const char* line_end = (line_no < LineOffsets.Size) ? buf_begin + LineOffsets[line_no] : NULL;
-				if (Filter.PassFilter(line, line_end))
-					ImGui::TextUnformatted(line, line_end);
-				line = line_end && line_end[1] ? line_end + 1 : NULL;
-			}
-		}
-		else
-		{
-			ImGui::TextUnformatted(Buf.begin());
-		}
-
-		if (ScrollToBottom)
-			ImGui::SetScrollHere(1.0f);
-		ScrollToBottom = false;
-		ImGui::EndChild();
-		ImGui::End();
-	}
-};
-
-
 class DroneKB : public DroneClient
 {
 public:
@@ -117,6 +57,8 @@ private:
 
 	RGBGL_Player			player;
 	GLFWwindow*				window;
+
+	SimpleObjectTracker		obj_tracker;
 
 
 	bool					run_main_loop = true;
@@ -203,18 +145,24 @@ private:
 		
 	}
 
+
 	void show_color_obj_tracking_window()
 	{
 		if(show_color_obj_tracking)
 		{
-			static float 	low_color[3];
-			static float 	high_color[3];
+			static float 	low_color[4] {0.0f,134.0f,91.0f};
+			static float 	high_color[4] {12.0f,255.0f,255.0f};
+
+			static float	low_color2[4] {168.0f,134.0f,91.0f};
+			static float	high_color2[4] {179.0f,255.0f,255.0f};
 
 			static int		interval_time;
 
 			static int 		size_obj[2]{ 20 , 20 };
 
-			static bool		is_started;
+			static bool		external_interval = true;
+
+			static bool		is_started = false;
 
 			int misc_flags = ImGuiColorEditFlags_HSV;
 
@@ -225,30 +173,63 @@ private:
 			ImGui::Separator();
 			ImGui::DragInt2("Dimension (CM)", size_obj);
 
+			ImGui::Checkbox("Interval Exterieur",&external_interval);
 
-			ImGui::Text("Valeur minimum range");
-			ImGui::ColorEdit3("Minimaum##1", (float*)low_color, misc_flags);
+			ImGui::Text("Min");
+			if(ImGui::DragFloat3("Min##1", (float*)low_color,1,0,255))
+			{
+				obj_tracker.setLowTresh(cv::Scalar(low_color[0], low_color[1], low_color[2]));
+			}
 
-			ImGui::Text("Valeur maximum range");
-			ImGui::ColorEdit3("Maximum##2", (float*)high_color, misc_flags);
+			ImGui::Text("Max");
+			if(ImGui::DragFloat3("Max##2", (float*)high_color,1,0,255))
+			{
+				obj_tracker.setHighTresh(cv::Scalar(high_color[0], high_color[1], high_color[2]));
+			}
 
-			ImGui::DragInt("Interval entre détection (MS)",&interval_time,0.5,0,500);
+			if(external_interval)
+			{
+				ImGui::Text("Min 2");
+				if(ImGui::DragFloat3("Min##3", (float*)low_color2,1,0,255))
+				{
+					obj_tracker.setLowTresh2(cv::Scalar(low_color2[0],low_color2[1],low_color2[2]));
+				}
+				ImGui::Text("Max 2");
+				if(ImGui::DragFloat3("Max##4", (float*)high_color2,1,0,255))
+				{
+					obj_tracker.setHighTresh2(cv::Scalar(high_color2[0], high_color2[1], high_color2[2]));
+				}
+			}
+
+			if(ImGui::DragInt("Interval entre détection (MS)",&interval_time,0.05,0,500))
+			{
+				obj_tracker.setIntervalMS(interval_time);
+			}
 
 			ImGui::Separator();
 
 			if(is_started) {
-				if (ImGui::Button("Arreter",{ 200,50})){
+
+				if (ImGui::Button("Arreter", { 200,20 })) {
 					is_started = false;
 					enable_tracking_video = false;
 				}
-			}
-			else {
-				if (ImGui::Button("Demarrer", {200, 50})) {
+				ImGui::Separator();
+				auto i = obj_tracker.getLastObjectInfo();
+				ImGui::VSliderInt("Y", ImVec2(18, 160), &i.position.x,0,640);
+				ImGui::SameLine();
+				ImGui::SliderInt("X", &i.position.y, 0, 360);
+
+			} else {
+				if (ImGui::Button("Demarrer", {200, 20})) {
 					is_started = true;
+					obj_tracker.setModeThreeshold(!external_interval);
+					obj_tracker.reset();
 					enable_tracking_video = true;
 				}
 			}
 
+			
 
 
 			ImGui::End();
@@ -551,6 +532,10 @@ private:
 			if (has_image) {
 				last_mat = m;
 				player.setPixels(last_mat);
+				if(enable_tracking_video)
+				{
+					obj_tracker.addImage(last_mat);
+				}
 			}
 
 			ImGui_ImplOpenGL3_NewFrame();
@@ -563,12 +548,17 @@ private:
 
 			if (enable_tracking_video) {
 				//int v = get_image_noise_level(last_mat);
-				uint tex;
-				cv::Mat b;
-				traitementImage(last_mat, b);
-				cv::cvtColor(b, presentation_mat, cv::COLOR_GRAY2BGR);
-				//imshow("lol", b);
-				player.setPixels2(presentation_mat);
+				static bool		is_gap_over;
+				cv::Mat b = obj_tracker.getBestThreshOutput(is_gap_over);
+				if(is_gap_over && !b.empty())
+				{
+					if(obj_tracker.tryFoundObject(b)) {
+						auto i = obj_tracker.getLastObjectInfo();
+						printf("Object Area : %.2f Position : %d %d\n", i.pixel_area, i.position.x, i.position.y);
+					}
+					cv::cvtColor(b, b, cv::COLOR_GRAY2BGR);
+					player.setPixels2(b);
+				} 
 				player.draw2();
 			}
 
