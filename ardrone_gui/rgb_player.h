@@ -12,20 +12,29 @@
 
 
 class RGBGL_Player {
+	int pos_x = 0;
+	int pos_y = 0;
+	int vid_w = 0;
+	int vid_h = 0;
+	int win_w = 0;
+	int win_h = 0;
+	GLuint vao = 0;
+	GLuint i_tex = 0;
+	GLuint i2_tex = 0;
+	GLuint vert = 0;
+	GLuint frag = 0;
+	GLuint prog = 0;
+	GLint u_pos = -1;
+	bool textures_created = false;
+	bool shader_created = false;
+
+	bool i_fill = false;
+	bool i2_fill = false;
+
+	glm::mat4 pm = glm::mat4(1.0);
 
 public:
 	RGBGL_Player()
-		: vid_w(0),
-		vid_h(0),
-		win_w(0),
-		win_h(0),
-		vao(0),
-		vert(0),
-		frag(0),
-		prog(0),
-		u_pos(-1),
-		textures_created(false),
-		shader_created(false)
 	{
 
 	}
@@ -66,6 +75,7 @@ public:
 		//set length of one complete row in data (doesn't need to equal image.cols)
 		glPixelStorei(GL_UNPACK_ROW_LENGTH, m.step / m.elemSize());
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, vid_w, vid_h, GL_BGR, GL_UNSIGNED_BYTE, m.ptr());
+		i_fill = true;
 
 	}
 	void setPixels2(cv::Mat& m )
@@ -77,40 +87,68 @@ public:
 		//set length of one complete row in data (doesn't need to equal image.cols)
 		glPixelStorei(GL_UNPACK_ROW_LENGTH, m.step / m.elemSize());
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, vid_w, vid_h, GL_BGR, GL_UNSIGNED_BYTE, m.ptr());
+		i2_fill = true;
+	}
 
+	void disable2()
+	{
+		i2_fill = false;
 	}
 
 
 	void draw() {
 		assert(textures_created == true);
-
+		int pos_x1, pos_x2, pos_y1, pos_y2;
+		if (i_fill && !i2_fill)
+		{
+			pos_x1 = pos_x;
+			pos_y1 = pos_y;
+		}
+		else if (i_fill && i2_fill)
+		{
+			pos_y2 = pos_y1 = pos_y;
+			pos_x1 = pos_x - vid_w / 2;
+			pos_x2 = pos_x + vid_w / 2;
+		} else if (!i_fill && i2_fill)
+		{
+			pos_x2 = pos_x;
+			pos_y2 = pos_y;
+		}
 
 		glBindVertexArray(vao);
 		glUseProgram(prog);
+		if (i_fill)
+		{
+			glUniform4f(u_pos, pos_x1, pos_y1, vid_w, vid_h);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, i_tex);
+			glUniform1i(glGetUniformLocation(prog, "texture"), 0);
 
-		glUniform4f(u_pos, pos_x, pos_y, vid_w, vid_h);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, i_tex);
-		glUniform1i(glGetUniformLocation(prog, "texture"), 0);
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		}
+		if(i2_fill)
+		{
+			glUniform4f(u_pos, pos_x2, pos_y2, vid_w, vid_h);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, i2_tex);
+			glUniform1i(glGetUniformLocation(prog, "texture"), 0);
 
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		}
 	}
 
-	void draw2()
+	void disable(int i)
 	{
-		glBindVertexArray(vao);
-		glUseProgram(prog);
-
-		glUniform4f(u_pos, 0, 0, vid_w, vid_h);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, i2_tex);
-		glUniform1i(glGetUniformLocation(prog, "texture"), 0);
-
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
+		switch(i)
+		{
+		case 1:
+			i_fill = false;
+			break;
+		case 2:
+			i2_fill = false;
+		}
 	}
+
 	void resize(int winW, int winH) {
 		assert(winW > 0 && winH > 0);
 
@@ -195,21 +233,4 @@ private:
 
 		return true;
 	}
-	int pos_x;
-	int pos_y;
-	int vid_w;
-	int vid_h;
-	int win_w;
-	int win_h;
-	GLuint vao;
-	GLuint i_tex;
-	GLuint i2_tex;
-	GLuint vert;
-	GLuint frag;
-	GLuint prog;
-	GLint u_pos;
-	bool textures_created;
-	bool shader_created;
-
-	glm::mat4 pm;
 };

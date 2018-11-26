@@ -89,7 +89,7 @@ bool SimpleObjectTracker::tryFoundObject(const cv::Mat& img)
 	obj_info o;
 	o.pixel_area = m.m00;
 	o.at_time = HRClock::now();
-	o.position = { (int)(m.m01 / m.m00), (int)(m.m10 / m.m00) };
+	o.position = { (int)(m.m10 / m.m00), (int)(m.m01 / m.m00) };
 	object_info_list.emplace_back(o);
 	return true;
 }

@@ -156,11 +156,11 @@ private:
 			static float	low_color2[4] {168.0f,134.0f,91.0f};
 			static float	high_color2[4] {179.0f,255.0f,255.0f};
 
-			static int		interval_time;
+			static int		interval_time = 750;
 
 			static int 		size_obj[2]{ 20 , 20 };
 
-			static bool		external_interval = true;
+			static bool		external_interval = false;
 
 			static bool		is_started = false;
 
@@ -213,12 +213,15 @@ private:
 				if (ImGui::Button("Arreter", { 200,20 })) {
 					is_started = false;
 					enable_tracking_video = false;
+					player.disable2();
 				}
 				ImGui::Separator();
 				auto i = obj_tracker.getLastObjectInfo();
-				ImGui::VSliderInt("Y", ImVec2(18, 160), &i.position.x,0,640);
+				ImGui::VSliderInt("Y", ImVec2(18, 160), &i.position.y,360,0);
 				ImGui::SameLine();
-				ImGui::SliderInt("X", &i.position.y, 0, 360);
+				ImGui::SliderInt("X", &i.position.x, 0, 640);
+				ImGui::SameLine(0);
+				ImGui::Text("Air : %.2f", i.pixel_area);
 
 			} else {
 				if (ImGui::Button("Demarrer", {200, 20})) {
@@ -554,12 +557,10 @@ private:
 				{
 					if(obj_tracker.tryFoundObject(b)) {
 						auto i = obj_tracker.getLastObjectInfo();
-						printf("Object Area : %.2f Position : %d %d\n", i.pixel_area, i.position.x, i.position.y);
 					}
 					cv::cvtColor(b, b, cv::COLOR_GRAY2BGR);
 					player.setPixels2(b);
 				} 
-				player.draw2();
 			}
 
 			player.draw();
