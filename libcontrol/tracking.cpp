@@ -28,6 +28,11 @@ cv::Mat SimpleObjectTracker::getBestThreshOutput(bool& is_ready)
 	}
 	is_ready = true;
 	cv::Mat out;
+	if(best_image.empty())
+	{
+		is_ready = false;
+		return out;
+	}
 	if (get_interval_between)
 		traitementThreshold(best_image, out);
 	else
