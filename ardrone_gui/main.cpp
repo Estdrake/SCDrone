@@ -548,7 +548,6 @@ private:
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-
 			if (enable_tracking_video) {
 				//int v = get_image_noise_level(last_mat);
 				static bool		is_gap_over;
