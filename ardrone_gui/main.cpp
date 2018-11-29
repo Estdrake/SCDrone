@@ -240,8 +240,6 @@ private:
 			}
 			
 
-			
-
 
 			ImGui::End();
 			
