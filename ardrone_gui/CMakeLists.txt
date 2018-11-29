@@ -11,7 +11,6 @@ include_directories (
     "${PROJECT_SOURCE_DIR}/libcontrol/"
 )
 
-
 include_directories (${PROJECT_SOURCE_DIR}/imgui)
 
 # Add source to this project's executable.

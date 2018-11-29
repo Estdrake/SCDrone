@@ -5,21 +5,17 @@
 #include <numeric>
 #include "logger.h"
 
-
 typedef std::chrono::high_resolution_clock HRClock;
 using namespace std::chrono;
 
 uint8_t PADDING[AV_INPUT_BUFFER_PADDING_SIZE]{ 0 };
 
-
-VideoStaging::VideoStaging(VFQueue* queue, MQueue* mqueue) : of(), Runnable()
-{
+VideoStaging::VideoStaging(MQueue* queue) : of(), Runnable() {
 #ifdef DEBUG_VIDEO_STAGING
 	start_gap = HRClock::now();
 #endif
 	avcodec_register_all();
-	this->queue = queue;
-	this->mqueue = mqueue;
+	this->mqueue = queue;
 	this->have_received = false;
 	this->buffer_size = H264_INBUF_SIZE;
 	this->line_size = 0;
@@ -53,10 +49,10 @@ VideoStaging::VideoStaging(VFQueue* queue, MQueue* mqueue) : of(), Runnable()
 	}
 	avcodec_get_context_defaults3(codec_ctx, codec);
 
-	if(codec->capabilities & AV_CODEC_CAP_TRUNCATED)
-	{
+	//if (codec->capabilities & AV_CODEC_CAP_TRUNCATED)
+	//{
 		codec_ctx->flags |= AV_CODEC_FLAG_TRUNCATED;
-	}
+	//}
 
 	codec_ctx->bit_rate = bit_rate;
 	codec_ctx->width = display_width;
@@ -72,10 +68,10 @@ VideoStaging::VideoStaging(VFQueue* queue, MQueue* mqueue) : of(), Runnable()
 	codec_ctx->skip_idct = AVDISCARD_DEFAULT;
 
 	// Enfaire devrait peux etre mettre l'option fast si on n'a besoin de vitesse
-	//av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
+	av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
 
 	codec_parser = av_parser_init(codec_ctx->codec_id);
-	if(codec_parser == nullptr)
+	if (codec_parser == nullptr)
 	{
 		// devrait jamais arriver
 		return;
@@ -98,6 +94,12 @@ VideoStaging::VideoStaging(VFQueue* queue, MQueue* mqueue) : of(), Runnable()
 		display_height,0, 0.0,100,record_to_file_raw, record_folder.string().c_str()
 	};
 
+}
+
+VideoStaging::VideoStaging(VFQueue* queue, MQueue* mqueue) : VideoStaging(mqueue)
+{
+	this->queue = queue;
+	thread_mode = true;
 }
 
 
@@ -155,6 +157,44 @@ int VideoStaging::init() const
 	return 0;
 
 }
+
+void VideoStaging::onNewVideoFrame(VideoFrame& vf) {
+#ifdef DEBUG_VIDEO_STAGING
+	if (last_frame != 0 && last_frame + 1 != vf.Header.frame_number) { // on n'a manquer des frames
+		frame_lost += vf.Header.frame_number - last_frame;
+		AR_LOG_WARNING(vf.Header.frame_number - last_frame, " frame lost\n");
+		//qDebug() << "We have lose " << (vf.Header.frame_number - last_frame) << " frames on staging";
+	}
+	last_frame = vf.Header.frame_number;
+	last_start = std::chrono::high_resolution_clock::now();
+#endif
+	if (!have_received)
+	{
+		init_or_frame_changed(vf, true);
+		have_received = true;
+	}
+	add_frame_buffer(vf);
+#ifdef DEBUG_VIDEO_STAGING
+	last_end = HRClock::now();
+	times.push_back((duration_cast<milliseconds>(last_end - last_start)).count());
+	if (times.size() == 100) {
+		auto v = std::accumulate(times.begin(), times.end(), 0.0) / times.size();
+		//qDebug() << "Average time for 100 frame " << v << "ms";
+		this->staging_info = {
+			CODEC_MPEG4_AVC, bit_rate, display_width,
+			display_height,frame_lost, v,100,record_to_file_raw, record_folder.string().c_str()
+		};
+		frame_lost = 0;
+		times.clear();
+	}
+#endif
+	if (record_to_file_raw)
+	{
+		append_file(vf);
+	}
+}
+
+
 void VideoStaging::run_service()
 {
 	VideoFrame vf {};
@@ -165,39 +205,7 @@ void VideoStaging::run_service()
 		vf = queue->pop_wait(100ms, &has_data);
 		if (!has_data)
 			continue;
-#ifdef DEBUG_VIDEO_STAGING
-		if (last_frame != 0 && last_frame + 1 != vf.Header.frame_number) { // on n'a manquer des frames
-			frame_lost += vf.Header.frame_number - last_frame;
-			AR_LOG_WARNING(vf.Header.frame_number - last_frame, " frame lost\n");
-			//qDebug() << "We have lose " << (vf.Header.frame_number - last_frame) << " frames on staging";
-		}
-		last_frame = vf.Header.frame_number;
-		last_start = std::chrono::high_resolution_clock::now();
-#endif
-		if(!have_received)
-		{
-			init_or_frame_changed(vf, true);
-			have_received = true;
-		}
-		add_frame_buffer(vf);
-#ifdef DEBUG_VIDEO_STAGING
-		last_end = HRClock::now();
-		times.push_back((duration_cast<milliseconds>(last_end - last_start)).count());
-		if (times.size() == 100) {
-			auto v = std::accumulate(times.begin(), times.end(), 0.0) / times.size();
-			//qDebug() << "Average time for 100 frame " << v << "ms";
-			this->staging_info = {
-				CODEC_MPEG4_AVC, bit_rate, display_width,
-				display_height,frame_lost, v,100,record_to_file_raw, record_folder.string().c_str()
-			};
-			frame_lost = 0;
-			times.clear();
-		}
-#endif
-		if(record_to_file_raw)
-		{
-			append_file(vf);
-		}
+		onNewVideoFrame(vf);
 	}
 	std::cout << "Video stagging has been stop" << std::endl;
 }
@@ -255,9 +263,12 @@ bool VideoStaging::add_frame_buffer(const VideoFrame& vf)
 	memcpy(buffer+indice_buffer, vf.Data, vf.Got);
 	indice_buffer += vf.Got;
 
-
-
-	int len = av_parser_parse2(codec_parser, codec_ctx, &packet->data, &packet->size, buffer, indice_buffer, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
+	packet->stream_index = vf.Header.stream_id;
+	if (vf.Header.frame_type == FRAME_TYPE_IDR_FRAME)
+		packet->flags |= AV_PKT_FLAG_KEY;
+	else
+		packet->flags = 0;
+	int len = av_parser_parse2(codec_parser, codec_ctx, &packet->data, &packet->size, buffer, indice_buffer,AV_NOPTS_VALUE, vf.Header.timestamp, vf.Header.chunck_index);
 	if(len < 0)
 	{
 		// erreur de parsing pas bon

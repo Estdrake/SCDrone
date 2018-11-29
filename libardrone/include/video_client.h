@@ -2,6 +2,7 @@
 #define _VIDEO_CLIENT_H_
 
 #include "video_common.h"
+#include "video_staging.h"
 #include "thread.h"
 
 #include <thread>
@@ -10,16 +11,17 @@
 #include <QtCore/QDebug>
 #include <QtNetwork/QTcpSocket>
 
-typedef ConcurrentQueue<VideoFrame> VFQueue;
-
 class VideoClient : QObject, public Runnable {
 	
 public:
 	VideoClient(ConcurrentQueue<VideoFrame>* queue);
+	VideoClient(VideoStaging* vs);
 	~VideoClient();
 
 	void run_service();
 private:
+	bool								direct_staging = false;
+	VideoStaging*						video_staging;
 	ConcurrentQueue<VideoFrame>*		queue;
 	QTcpSocket* socket;
 

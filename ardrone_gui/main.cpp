@@ -36,7 +36,7 @@ class DroneKB : public DroneClient
 public:
 	virtual ~DroneKB() = default;
 
-	DroneKB() : last_mat(640,360,CV_8UC3,cv::Scalar(0,0,0)), presentation_mat(last_mat.clone())
+	DroneKB() : DroneClient(true),last_mat(640,360,CV_8UC3,cv::Scalar(0,0,0)), presentation_mat(last_mat.clone())
 	{
 		nd = {};
 		speedXZ = 0.1f;
@@ -238,8 +238,6 @@ private:
 					enable_tracking_video = true;
 				}
 			}
-			
-
 			
 
 

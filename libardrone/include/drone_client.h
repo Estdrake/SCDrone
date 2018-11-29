@@ -13,6 +13,8 @@ class DroneClient {
 protected:
 	~DroneClient() = default;
 
+	bool				united_video_thread;
+
 	VFQueue				vf_queue;
 	MQueue				mat_queue;
 	ATQueue				at_queue;
@@ -31,6 +33,7 @@ private:
 
 public:
 	DroneClient();
+	DroneClient(bool lol = true);
 
 	int Start();
 
