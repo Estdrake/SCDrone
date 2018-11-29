@@ -16,17 +16,15 @@ set(GLEW_INCLUDE_PATH "" CACHE PATH "The directory that contains GL/glew.h" )
 set(GLEW_LIBRARY "" CACHE FILEPATH "libglew.a or glew.lib" )
 
 set(GLM_INCLUDE_PATH "" CACHE PATH "The directory that contains glm/glm.hpp" )
-set(SOIL_INCLUDE_PATH "" CACHE PATH "The directory that contains SOIL.h" )
-set(SOIL_LIBRARY "" CACHE PATH "The directory that contains SOIL.lib" )
 
-set(ASSIMP_INCLUDE_PATH "" CACHE PATH "The directory that contains assimp/assimp.h" )
-set(ASSIMP_LIBRARY "" CACHE PATH "The directory that contains assimp.lib" )
 set(STB_INCLUDE_PATH "" CACHE PATH "The directory that contains stb_image.h")
 
 set(GLFW_INCLUDE_PATH "" CACHE PATH "The directory that contains GLFW/glfw3.h" )
 set(GLFW_LIBRARY "" CACHE PATH "The directory that contains glfw3.lib" )
+
 set( ASIO_INCLUDE_DIR "" CACHE PATH "The path containing asio/asio.hpp")
 add_definitions(-DASIO_STANDALONE)
+
 if(WIN32)
 	add_definitions(-D_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING -D_WIN32_WINNT=0xA00 -DUNICODE)
 endif()
@@ -35,7 +33,6 @@ enable_testing()
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	message("debug mode")
 endif()
-
 
 
 include_directories(
@@ -55,7 +52,7 @@ link_directories(
 #add_definitions(-DDEBUG_VIDEO_CLIENT)
 add_definitions(-DDEBUG_VIDEO_STAGING)
 
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
+#set(CMAKE_INCLUDE_CURRENT_DIR ON)
 find_package( OpenGL REQUIRED)
 find_package( OpenCV REQUIRED)
 find_package( Qt5Network REQUIRED)

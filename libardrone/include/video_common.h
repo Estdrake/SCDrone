@@ -1,8 +1,9 @@
 #ifndef _VIDEO_COMMON_H_
 #define _VIDEO_COMMON_H_
+#include "thread.h"
 
+#include <opencv2/core.hpp>
 #include <cstdint>
-
 enum frame_type_t {
 	Unknow,
 	I,
@@ -79,5 +80,9 @@ struct VideoFrame {
 
 
 bool getOffsetMagicWord(const char* data);
+
+typedef ConcurrentQueue<VideoFrame> VFQueue;
+typedef ConcurrentQueue<cv::Mat> MQueue;
+
 
 #endif

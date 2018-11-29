@@ -2,8 +2,6 @@
 #define VIDEO_STAGING_H
 
 #include "video_common.h"
-#include "thread.h"
-#include "video_client.h"
 
 extern "C" {
 	#include <libavformat/avformat.h>
@@ -25,7 +23,6 @@ namespace fs = std::filesystem;
 
 #define H264_INBUF_SIZE 50000 // Grosseur de mon buffer que j'utilise pour les trames que je recoit
 
-typedef ConcurrentQueue<cv::Mat> MQueue;
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
 
 
@@ -89,17 +86,21 @@ class VideoStaging : public Runnable
 	bool						only_idr = true;			// Indique si on souhaite selon parser les frames IDR et de skipper les frames P
 
 	atomic<bool>				record_to_file_raw = false; // Indique si on souhaite sauvegarder le stream dans un fichier
+
 	fs::path					record_folder = fs::path("./recording");		// Indique le chemin du fichier a sauvegarder le stream
 	int							stream_index = 0;
 	std::ofstream				of;
 
+	bool						thread_mode = false;
 	VFQueue*					queue;						// La queue dans laquelle les frames reçu par TCP arrivent
+
 	MQueue*						mqueue;
 
 	std::atomic<video_staging_info> staging_info;
 	
 
 public:
+	VideoStaging(MQueue* mqueue);
 	VideoStaging(VFQueue* queue, MQueue* mqueue);
 	//VideoStaging(VFQueue* queue, const char* filepath);
 	~VideoStaging();
@@ -109,6 +110,8 @@ public:
 	void run_service() override;
 
 	void set_raw_recording(bool state);
+
+	void onNewVideoFrame(VideoFrame& vf);
 
 	video_staging_info getInfo()
 	{

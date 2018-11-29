@@ -28,6 +28,14 @@ VideoClient::VideoClient(ConcurrentQueue<VideoFrame>* queue)
 	this->queue = queue;
 }
 
+VideoClient::VideoClient(VideoStaging* vs) {
+	this->socket = new QTcpSocket(this);
+	socket->connectToHost(WIFI_ARDRONE_IP, VIDEO_PORT);
+	this->video_staging = vs;
+	direct_staging = true;
+	
+}
+
 VideoClient::~VideoClient() = default;
 
 void VideoClient::run_service() {
@@ -109,7 +117,10 @@ void VideoClient::run_service() {
 #ifdef DEBUG_VIDEO_CLIENT
 					qDebug() << "Pushing frame " << vf.Header.frame_number;
 #endif
-					queue->push(vf);
+					if (direct_staging)
+						video_staging->onNewVideoFrame(vf);
+					else
+						queue->push(vf);
 					vf.Got = 0;
 				}
 			}
