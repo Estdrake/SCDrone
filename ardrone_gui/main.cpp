@@ -75,6 +75,7 @@ private:
 	bool					show_manual_control = true;
 	bool					enable_manual_control = false;
 	bool					enable_tracking_video = false;
+	bool					enable_autopilot_xy = false;
 	speed					speed_drone = { 0.2f,0.4f,0.2f,0.4f };
 
 	void show_log_window()
@@ -163,6 +164,7 @@ private:
 			static bool		external_interval = false;
 
 			static bool		is_started = false;
+			
 
 			int misc_flags = ImGuiColorEditFlags_HSV;
 
@@ -215,12 +217,17 @@ private:
 					enable_tracking_video = false;
 					player.disable2();
 				}
+				ImGui::SameLine();//esteban est rendu la
+				if (ImGui::Button("Demarrer", { 200,20 })) {
+					enable_autopilot_xy = true;
+
+				}
 				ImGui::Separator();
 				auto i = obj_tracker.getLastObjectInfo();
 				ImGui::VSliderInt("Y", ImVec2(18, 160), &i.position.y,360,0);
 				ImGui::SameLine();
 				ImGui::SliderInt("X", &i.position.x, 0, 640);
-				ImGui::SameLine(0);
+				ImGui::SameLine();
 				ImGui::Text("Air : %.2f", i.pixel_area);
 
 			} else {
@@ -231,6 +238,7 @@ private:
 					enable_tracking_video = true;
 				}
 			}
+			
 
 			
 
