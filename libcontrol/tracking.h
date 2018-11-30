@@ -6,23 +6,23 @@
 #include "common_headers.h"
 #include "chrono.h"
 
+struct images_info
+{
+	cv::Mat image;
+	int		noise;
+};
+
+struct obj_info
+{
+	float		pixel_area;
+	cv::Vec2f	position;
+	TimePoint	at_time;
+};
 
 
 // SimpleObjectTracker permet de faire le suivit simple d'un object d'une forme géométrique simple et d'une couleur simple
 class SimpleObjectTracker
 {
-	struct images_info
-	{
-		cv::Mat image;
-		int		noise;
-	};
-
-	struct obj_info
-	{
-		float		pixel_area;
-		cv::Point	position;
-		TimePoint	at_time;
-	};
 
 	bool						get_interval_between = false; // si vrai quand on fait le range on prend les valeur entre le treshold sinon on prend les valeurs a l'exterieur
 
@@ -33,16 +33,20 @@ class SimpleObjectTracker
 	cv::Scalar					high_thresh_2 {179,255,255};
 
 
-	cv::Size					object_size { 20 , 20};
+	cv::Size					object_size { 20 , 20}; // Grandeur de l'object en cm dans la vrai vie
 
 	Chrono						chrono;
-	int							interval_execute = 100;
+	int							interval_execute = 750;
 
-	cv::Mat						best_image;
-	int							current_noise = 1000;
+	cv::Mat						best_image; // Contient la meilleur image dans l'interval
+	int							current_noise = 1000; // Contient le bruit de la meilleur image
 
-	int							noise_parse_max = 1000;
+	int							noise_parse_max = 1000; 
 	int							noise_contour_max = 50;
+
+	cv::Size2f					gap_object; // Gap dans lequele on considere l'object centrer dans notre image
+
+	obj_info					last_info;
 
 	std::vector<obj_info>		object_info_list; // contient les dernieres informations de positions sur l'object
 
@@ -55,8 +59,15 @@ public:
 	// ajoute une nouvelle image et retourne true si le gap d'execution est passer
 	bool addImage(cv::Mat& miam);
 	// retourne l'image la moins bruité avec le threshold d'appliquer
-	cv::Mat getBestThreshOutput(bool& is_ready);
+	cv::Mat getBestThreshOutput(bool& is_ready,obj_info& obj_info);
 
+	cv::Size2f getGapObject() {
+		return gap_object;
+	}
+
+	void setGapObject(cv::Size2f size) {
+		gap_object = size;
+	}
 
 	void setModeThreeshold(bool interval_between)
 	{
@@ -94,9 +105,7 @@ public:
 
 	obj_info getLastObjectInfo()
 	{
-		if (object_info_list.empty())
-			return {};
-		return object_info_list.at(object_info_list.size() - 1);
+		return last_info;
 	}
 
 };

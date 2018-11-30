@@ -19,7 +19,7 @@ bool SimpleObjectTracker::addImage(cv::Mat& miam)
 	return false;
 }
 
-cv::Mat SimpleObjectTracker::getBestThreshOutput(bool& is_ready)
+cv::Mat SimpleObjectTracker::getBestThreshOutput(bool& is_ready,obj_info& obj)
 {
 	if (!chrono.isOver())
 	{
@@ -37,6 +37,14 @@ cv::Mat SimpleObjectTracker::getBestThreshOutput(bool& is_ready)
 		traitementThreshold(best_image, out);
 	else
 		traitementThresholdExterieur(best_image, out);
+	// Approximate contours to polygons + get bounding rects and circles
+	dilate(out, out, Mat(), Point(-1, -1), 20);
+	erode(out, out, Mat(), Point(-1, -1), 15);
+
+	if (tryFoundObject(out)) {
+		obj = last_info;
+	}
+
 	chrono.reset();
 	current_noise = 3000;
 	return out;
@@ -69,10 +77,6 @@ void SimpleObjectTracker::traitementThreshold(const cv::Mat& frame, cv::Mat& ret
 	cvtColor(retour, retour, COLOR_BGR2HSV);
 
 	inRange(retour, low_thresh_1, high_thresh_1, retour);
-	// Approximate contours to polygons + get bounding rects and circles
-	dilate(retour, retour, Mat(), Point(-1, -1), 20);
-	erode(retour, retour, Mat(), Point(-1, -1), 15);
-	
 }
 
 bool SimpleObjectTracker::tryFoundObject(const cv::Mat& img)
@@ -94,7 +98,10 @@ bool SimpleObjectTracker::tryFoundObject(const cv::Mat& img)
 	obj_info o;
 	o.pixel_area = m.m00;
 	o.at_time = HRClock::now();
-	o.position = { (int)(m.m10 / m.m00), (int)(m.m01 / m.m00) };
-	object_info_list.emplace_back(o);
+	o.position = { (float)(m.m10 / m.m00), (float)(m.m01 / m.m00) };
+	//convertion des coordonné ver NDC
+	o.position[0] = ((o.position[0] / 640.0f) * 2.0f) - 1.0f;
+	o.position[1] = (((-(o.position[1] - 360.0f)) * 2.0f) / 360.0f) - 1.0f;
+	last_info = o;
 	return true;
 }

@@ -224,9 +224,9 @@ private:
 				}
 				ImGui::Separator();
 				auto i = obj_tracker.getLastObjectInfo();
-				ImGui::VSliderInt("Y", ImVec2(18, 160), &i.position.y,360,0);
+				ImGui::VSliderFloat("Y", ImVec2(18, 160), &i.position[1],-1.0f,1.0f);
 				ImGui::SameLine();
-				ImGui::SliderInt("X", &i.position.x, 0, 640);
+				ImGui::SliderFloat("X", &i.position[0], -1.0f, 1.0f);
 				ImGui::SameLine();
 				ImGui::Text("Air : %.2f", i.pixel_area);
 
@@ -556,16 +556,17 @@ private:
 
 			if (enable_tracking_video) {
 				//int v = get_image_noise_level(last_mat);
-				static bool		is_gap_over;
-				cv::Mat b = obj_tracker.getBestThreshOutput(is_gap_over);
+				static bool			is_gap_over;
+				static obj_info		obj_info;
+				cv::Mat b = obj_tracker.getBestThreshOutput(is_gap_over,obj_info);
 				if(is_gap_over && !b.empty())
 				{
-					if(obj_tracker.tryFoundObject(b)) {
-						auto i = obj_tracker.getLastObjectInfo();
-					}
 					cv::cvtColor(b, b, cv::COLOR_GRAY2BGR);
 					player.setPixels2(b);
 				} 
+				if (obj_info.pixel_area != 0.0f) {
+					std::cout << "brah" << std::endl;
+				}
 			}
 
 			player.draw();
