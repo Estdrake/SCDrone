@@ -5,7 +5,6 @@
 
 #include "common_headers.h"
 #include "chrono.h"
-#include "at_client.h"
 
 
 
@@ -88,7 +87,6 @@ public:
 
 	bool tryFoundObject(const cv::Mat& img);
 
-	void followObject(ATClient * at_client,cv::Point objectPosition,speed drone_speed);
 
 	std::vector<obj_info>& getObjectsInfo() {
 		return object_info_list;
