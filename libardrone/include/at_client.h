@@ -67,6 +67,8 @@ public:
 	ATClient(ATQueue* queue,QObject* parent = 0);
 	~ATClient();
 	
+	void setVector2D(float x, float y);
+
 	void setSpeedX(x_direction d, float x);
 	void setSpeedY(y_direction d, float y);
 	void setSpeedZ(z_direction d, float z);

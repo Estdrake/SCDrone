@@ -44,7 +44,7 @@ class SimpleObjectTracker
 	int							noise_parse_max = 1000; 
 	int							noise_contour_max = 50;
 
-	cv::Size2f					gap_object; // Gap dans lequele on considere l'object centrer dans notre image
+	cv::Size2f					gap_object = { 0.20, 0.20 }; // Gap dans lequele on considere l'object centrer dans notre image
 
 	obj_info					last_info;
 
@@ -97,6 +97,11 @@ public:
 	void traitementThreshold(const cv::Mat& frame, cv::Mat& retour);
 
 	bool tryFoundObject(const cv::Mat& img);
+
+	bool isInCenterGap(const cv::Vec2f& p) {
+		return (p[0] < gap_object.width && p[0] > gap_object.width*-1.0f
+			&& p[1] < gap_object.height && p[1] > gap_object.height*-1.0f);
+	}
 
 
 	std::vector<obj_info>& getObjectsInfo() {

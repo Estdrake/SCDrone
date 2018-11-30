@@ -28,6 +28,18 @@ ATClient::~ATClient()
 	delete this->sender;
 }
 
+void ATClient::setVector2D(float x, float y) {
+	x_direction xd = RIGHT;
+	y_direction yd = HIGHER;
+	if (x < 0)
+		xd = LEFT;
+	if (y < 0)
+		yd = LOWER;
+	setProgressiveFlag(PROGRESSIVE);
+	setSpeedX(xd, 0.05f);
+	setSpeedY(yd, 0.05f);
+}
+
 void ATClient::setSpeedX(x_direction d, float x)
 {
 	if (d == LEFT)

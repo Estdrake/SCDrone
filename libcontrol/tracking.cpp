@@ -95,6 +95,9 @@ bool SimpleObjectTracker::tryFoundObject(const cv::Mat& img)
 			biggest = vp;
 	}
 	Moments m = moments(biggest);
+	if (m.m00 < 1200.0) {
+		return false;
+	}
 	obj_info o;
 	o.pixel_area = m.m00;
 	o.at_time = HRClock::now();

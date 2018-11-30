@@ -76,6 +76,9 @@ private:
 	bool					enable_manual_control = false;
 	bool					enable_tracking_video = false;
 	bool					enable_autopilot_xy = false;
+
+	bool					is_tracking_center = false;
+
 	speed					speed_drone = { 0.2f,0.4f,0.2f,0.4f };
 
 	void show_log_window()
@@ -160,6 +163,7 @@ private:
 			static int		interval_time = 750;
 
 			static int 		size_obj[2]{ 20 , 20 };
+			static float	gap_size[2]{ 0.2f, 0.2f };
 
 			static bool		external_interval = false;
 
@@ -174,7 +178,10 @@ private:
 			ImGui::TextColored({ 255,255,0,1 }, "Configuration de l'object");
 			ImGui::Separator();
 			ImGui::DragInt2("Dimension (CM)", size_obj);
-
+			if (ImGui::DragFloat2("Dimension Gap", gap_size, 0.05f, -1.0f, 1.0f)) {
+				obj_tracker.setGapObject({ gap_size[0],gap_size[1] });
+			}
+			ImGui::Separator();
 			ImGui::Checkbox("Interval Exterieur",&external_interval);
 
 			ImGui::Text("Min");
@@ -217,11 +224,6 @@ private:
 					enable_tracking_video = false;
 					player.disable2();
 				}
-				ImGui::SameLine();//esteban est rendu la
-				if (ImGui::Button("Demarrer", { 200,20 })) {
-					enable_autopilot_xy = true;
-
-				}
 				ImGui::Separator();
 				auto i = obj_tracker.getLastObjectInfo();
 				ImGui::VSliderFloat("Y", ImVec2(18, 160), &i.position[1],-1.0f,1.0f);
@@ -229,7 +231,23 @@ private:
 				ImGui::SliderFloat("X", &i.position[0], -1.0f, 1.0f);
 				ImGui::SameLine();
 				ImGui::Text("Air : %.2f", i.pixel_area);
-
+				ImGui::Separator();
+				if (!enable_autopilot_xy) {
+					if (ImGui::Button("Suivre")) {
+						if (at_client.get_ref() == "FLYING")
+							enable_autopilot_xy = true;
+						else
+							AR_LOG_ERROR(0, "Le drone doit etre en vol pour le tracking\n");
+					}
+				}
+				else {
+					if (ImGui::Button("Arreter Suivre")) {
+						at_client.hover();
+						enable_autopilot_xy = false;
+					}
+					ImGui::SameLine();
+					ImGui::TextColored({ 255,255,0,1 }, "Centrer ? %s", (is_tracking_center) ? "OUI" : "NON");
+				}
 			} else {
 				if (ImGui::Button("Demarrer", {200, 20})) {
 					is_started = true;
@@ -250,7 +268,20 @@ private:
 	{
 		if(show_basic_cmd_drone)
 		{
+
 			ImGui::Begin("Commande de Base",&show_basic_cmd_drone);
+			if (ImGui::Button("Take Off",{150,50}))
+			{
+				at_client.set_ref(TAKEOFF_FLAG);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Land",{150,50}))
+			{
+				if (enable_autopilot_xy)
+					enable_autopilot_xy = false;
+				at_client.set_ref(LAND_FLAG);
+			}
+			ImGui::SameLine();
 			if (ImGui::Button("Urgence",{150,50}))
 			{
 				at_client.set_ref(EMERGENCY_FLAG);
@@ -258,7 +289,11 @@ private:
 			ImGui::SameLine();
 			if (ImGui::Button("Calibrage au sol",{150,50}))
 			{
-				at_queue.push(at_format_ftrim());
+				if (at_client.get_ref() == "LANDED") {
+					at_queue.push(at_format_ftrim());
+				} else {
+					AR_LOG_ERROR(0,"Le drone doit etre au sol\n");
+				}
 
 			}
 			ImGui::SameLine();
@@ -356,6 +391,8 @@ private:
 			ImGui::Separator();
 			if(ImGui::Checkbox("Demarrer ",&enable_manual_control))
 			{
+				if (enable_autopilot_xy)
+					enable_autopilot_xy = false;
 				if(!enable_manual_control)
 				{
 					// quand on l'arrete on s'assure que le drone atterisse
@@ -561,14 +598,25 @@ private:
 				cv::Mat b = obj_tracker.getBestThreshOutput(is_gap_over,obj_info);
 				if(is_gap_over && !b.empty())
 				{
+
 					cv::cvtColor(b, b, cv::COLOR_GRAY2BGR);
 					player.setPixels2(b);
 				} 
-				if (obj_info.pixel_area != 0.0f) {
-					std::cout << "brah" << std::endl;
+				if (enable_autopilot_xy && is_gap_over) {
+					if (obj_info.pixel_area != 0.0f) {
+						if (!obj_tracker.isInCenterGap(obj_info.position)) {
+							printf("Not center %f %f \n", obj_info.position[0], obj_info.position[1]);
+							is_tracking_center = false;
+							at_client.setVector2D(obj_info.position[0], obj_info.position[1]);
+						}
+						else {
+							printf("Object center\n");
+							is_tracking_center = true;
+							at_client.hover();
+						}
+					}
 				}
 			}
-
 			player.draw();
 
 
