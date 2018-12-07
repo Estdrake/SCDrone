@@ -70,7 +70,7 @@ void VideoClient::run_service() {
 #ifdef DEBUG_VIDEO_CLIENT
 					print_video_stream_dump(&vf.Header);
 #endif
-					// Devrait peux etre faire une validation ici
+				// Devrait peux etre faire une validation ici
 					vf.Data = new unsigned char[vf.Header.payload_size];
 					vf.Got = length - vf.Header.header_size;
 					int missing = vf.Header.payload_size - vf.Got;
