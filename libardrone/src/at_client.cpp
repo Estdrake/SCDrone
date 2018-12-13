@@ -20,6 +20,7 @@ ATClient::ATClient(ATQueue* queue, QObject* parent) : QObject(parent), ref_mode(
 	this->socket = new QUdpSocket(this);
 	this->socket->bind(QHostAddress(WIFI_CLIENT_IP), port);
 	connect(socket, &QUdpSocket::readyRead, this, &ATClient::on_read_ready);
+	
 }
 
 ATClient::~ATClient()
@@ -40,6 +41,10 @@ void ATClient::setVector2D(float x, float y) {
 	setSpeedY(yd, 0.05f);
 }
 
+
+
+
+
 void ATClient::setSpeedX(x_direction d, float x)
 {
 	if (d == LEFT)
@@ -56,6 +61,7 @@ void ATClient::setSpeedY(y_direction d, float y)
 	speed s = speed_drone;
 	s.y = y;
 	speed_drone = s;
+	
 }
 
 void ATClient::setSpeedZ(z_direction d, float z)
@@ -74,6 +80,7 @@ void ATClient::setSpeedR(x_direction d, float r)
 	speed s = speed_drone;
 	s.r = r;
 	speed_drone = s;
+
 }
 
 void ATClient::hover()
@@ -267,4 +274,112 @@ void DroneControl::stop()
 		exitSignal = std::promise<void>();
 	}
 	started = false;
+}
+
+
+
+
+AsyncControl::AsyncControl(ATClient*client)
+{
+	this->client = client;
+	this->mouvement = false;
+	this->hoverring = false;
+}
+
+
+
+void AsyncControl::setVector2DAsync(float x, float y)
+{
+	if (this->chronometreHover.isOver() == true && this->mouvement == false)
+	{
+		if (hoverring == true)
+		{
+			std::cout << "stop hovering" << std::endl;
+			this->stopSignalHover.set_value();
+			this->theFuturHover.wait();
+			stopSignalHover = std::promise<void>();
+			hoverring = false;
+		}
+		chronometreBouge.setDuration(milliseconds(150));
+		chronometreBouge.reset();
+
+		this->theFuturTwoMouvement = this->stopSignalMouvement.get_future();
+
+		std::cout << "top" << std::endl;
+		
+
+
+		this->theFuturMouvement = std::async(std::launch::async, [&, x, y]()
+		{
+			x_direction xd = RIGHT;
+			y_direction yd = HIGHER;
+			if (x < 0)
+				xd = LEFT;
+			if (y < 0)
+				yd = LOWER;
+			while (this->theFuturTwoMouvement.wait_for(1ms) == std::future_status::timeout)
+			{
+				std::cout << "Mouvement" << std::endl;
+				client->setProgressiveFlag(PROGRESSIVE);
+				client->setSpeedX(xd, 0.05f);
+				client->setSpeedY(yd, 0.05f);
+				
+			}
+			std::cout << "salut" << std::endl;
+			
+		});
+		mouvement = true;
+	}
+	if (this->chronometreBouge.isOver() == true && this->hoverring == false)
+	{
+		if (mouvement == true)
+		{
+			std::cout << "stop mouvement" << std::endl;
+			this->stopSignalMouvement.set_value();
+			this->theFuturMouvement.wait();
+			stopSignalMouvement = std::promise<void>();
+			mouvement = false;
+		}
+		chronometreHover.setDuration(milliseconds(100));
+		chronometreHover.reset();
+		std::cout << "top hover" << std::endl;
+		this->theFuturTwoHover = this->stopSignalHover.get_future();
+
+
+		this->theFuturHover = std::async(std::launch::async, [&]()
+		{
+			while (this->theFuturTwoHover.wait_for(1ms) == std::future_status::timeout)
+			{
+				std::cout << "hovering" << std::endl;
+				client->hover();
+				
+			}
+			
+
+
+		});
+		hoverring = true;
+	}
+
+	
+}
+
+void AsyncControl::stopAutoPilot() 
+{
+	if (mouvement == true)
+	{
+		std::cout << "stop mouvement" << std::endl;
+		this->stopSignalMouvement.set_value();
+		this->theFuturMouvement.wait();
+		stopSignalMouvement = std::promise<void>();
+		mouvement = false;
+	}
+	if (hoverring == true)
+	{
+		std::cout << "stop hovering" << std::endl;
+		this->stopSignalHover.set_value();
+		this->theFuturHover.wait();
+		stopSignalHover = std::promise<void>();
+		hoverring = false;
+	}
 }

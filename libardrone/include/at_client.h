@@ -10,6 +10,7 @@
 #define AP_CLIENT_H
 #include "thread.h"
 #include "at_cmd.h"
+#include "chrono.h"
 #include <QObject>
 #include <QUdpSocket>
 #include <navdata_common.h>
@@ -59,7 +60,7 @@ class ATClient : public QObject, public Runnable
 	std::atomic<ref_flags>			ref_mode;
 	std::atomic<progressive_flags>	prog_flag;
 	std::atomic<speed>				speed_drone;
-
+	
 	int sequence_nbr;
 
 public:
@@ -67,6 +68,7 @@ public:
 	~ATClient();
 	
 	void setVector2D(float x, float y);
+	
 
 	void setSpeedX(x_direction d, float x);
 	void setSpeedY(y_direction d, float y);
@@ -121,12 +123,12 @@ class DroneControl
 	std::shared_future<void>	futureObj;
 	std::shared_future<void>	futureCurrent;
 	std::atomic<bool>			started;
-
+	
 	std::chrono::milliseconds		interval_msg{};
 
 public:
 	DroneControl(ATQueue* queue);
-
+	
 	void rotate(x_direction, float speed);
 	void move_x(x_direction, float speed);
 	void move_y(y_direction, float speed);
@@ -138,5 +140,25 @@ public:
 	bool wait_for(std::chrono::milliseconds ms) const;
 	void stop();
 };
+class AsyncControl
+{
+	ATClient*	client;
+	Chrono						chronometreBouge;
+	Chrono						chronometreHover;
+	std::promise<void>			stopSignalMouvement;
+	std::promise<void>			stopSignalHover;
+	std::shared_future<void>		theFuturMouvement;
+	std::shared_future<void>		theFuturTwoMouvement;
+	std::shared_future<void>		theFuturHover;
+	std::shared_future<void>		theFuturTwoHover;
+	std::atomic<bool>				mouvement;
+	std::atomic<bool>				hoverring;
+public:
+	AsyncControl(ATClient* client);
+
+	void setVector2DAsync(float x, float y);
+	void stopAutoPilot();
+};
+
 
 #endif

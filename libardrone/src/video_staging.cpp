@@ -106,28 +106,28 @@ VideoStaging::VideoStaging(VFQueue* queue, MQueue* mqueue) : VideoStaging(mqueue
 
 VideoStaging::~VideoStaging()
 {
-	if(codec_parser)
+	if (codec_parser)
 	{
 		av_parser_close(codec_parser);
 		codec_parser = nullptr;
 	}
-	if(codec_ctx)
+	if (codec_ctx)
 	{
 		avcodec_close(codec_ctx);
 		codec_ctx = nullptr;
 	}
-	if(frame)
+	if (frame)
 	{
 		av_free(frame);
 	}
-	if(frame_output)
+	if (frame_output)
 	{
 		av_free(frame_output);
 	}
 	if (img_convert_ctx) {
 		sws_freeContext(img_convert_ctx);
 	}
-	if(of)
+	if (of)
 	{
 	}
 	//delete buffer_array;
@@ -143,11 +143,11 @@ int VideoStaging::init() const
 		return 1;
 	}
 	// si le dossier n'existe pas on le crée
-	if(fs::exists(record_folder))
+	if (fs::exists(record_folder))
 	{
-		if(!fs::create_directory(record_folder))
+		if (!fs::create_directory(record_folder))
 		{
-			
+
 		}
 	}
 #ifdef DEBUG_VIDEO_STAGING
@@ -198,10 +198,10 @@ void VideoStaging::onNewVideoFrame(VideoFrame& vf) {
 
 void VideoStaging::run_service()
 {
-	VideoFrame vf {};
+	VideoFrame vf{};
 
 	bool has_data = false;
-	while(stopRequested() == false)
+	while (stopRequested() == false)
 	{
 		vf = queue->pop_wait(100ms, &has_data);
 		if (!has_data)
@@ -213,14 +213,15 @@ void VideoStaging::run_service()
 
 void VideoStaging::set_raw_recording(bool state)
 {
-	if(!state)
+	if (!state)
 	{
 		record_to_file_raw = false;
 		// la thread ne devrait plus ecrire dans le fichier raw on le ferme
 		of.close();
-	} else
+	}
+	else
 	{
-		if(!record_to_file_raw)
+		if (!record_to_file_raw)
 		{
 			time_t rawTime;
 			tm * timeInfo;
@@ -230,8 +231,8 @@ void VideoStaging::set_raw_recording(bool state)
 			size_t s = strftime(buffer, sizeof(buffer), "%d-%m %H:%M:%S", timeInfo);
 			string filename(buffer);
 			filename.append(".x264");
-			of.open("recording.x264",ofstream::binary | ofstream::out);
-			if(!of.is_open())
+			of.open("recording.x264", ofstream::binary | ofstream::out);
+			if (!of.is_open())
 			{
 				std::cout << "Could not start writting to " << filename << std::endl;
 				return;
@@ -250,19 +251,19 @@ bool VideoStaging::have_frame_changed(const VideoFrame& vf)
 
 bool VideoStaging::add_frame_buffer(const VideoFrame& vf)
 {
-	if(vf.Header.payload_size == 0)
+	if (vf.Header.payload_size == 0)
 	{
 		return false;
 	}
 
-	if(!packet_buffer.validSpace(vf.Got))
+	if (!packet_buffer.validSpace(vf.Got))
 	{
 		// buffer pas assez gros pour contenir la nouvelle data flush
 		printf("Buffer cant handle the truth\n");
 		packet_buffer.reset();
 	}
 
-	
+
 	// ajoute les nouvelles donner au packet
 	packet_buffer.append(vf.Data, vf.Header.payload_size);
 
@@ -277,17 +278,17 @@ bool VideoStaging::add_frame_buffer(const VideoFrame& vf)
 	else {
 		printf("Not parse anything\n");
 	}
-	if(len > 0 && size > 0)
+	if (len > 0 && size > 0)
 	{
 
 		int frameFinished = 0;
-		printf("Packet ready for frame len %d size parsed %d and my buffer size %d \n", len ,size,packet_buffer.index_end);
+		printf("Packet ready for frame len %d size parsed %d and my buffer size %d \n", len, size, packet_buffer.index_end);
 		AVPacket pkt;
 		av_init_packet(&pkt);
 		pkt.data = data;
 		pkt.size = len;
 		avcodec_decode_video2(codec_ctx, frame, &frameFinished, &pkt);
-		if(frameFinished)
+		if (frameFinished)
 		{
 			printf("Frame finished\n");
 
@@ -305,11 +306,11 @@ bool VideoStaging::add_frame_buffer(const VideoFrame& vf)
 			printf("Send packet failed\n");
 		}
 	}
-	
+
 	return false;
 }
 
-void VideoStaging::init_or_frame_changed(const VideoFrame& vf,bool init)
+void VideoStaging::init_or_frame_changed(const VideoFrame& vf, bool init)
 {
 	// Update la grandeur
 	codec_ctx->width = vf.Header.encoded_stream_width;
@@ -319,10 +320,10 @@ void VideoStaging::init_or_frame_changed(const VideoFrame& vf,bool init)
 
 	this->format_in = codec_ctx->pix_fmt;
 
-	img_convert_ctx = sws_getContext(this->display_width, this->display_height, this->format_in, this->display_width, 
+	img_convert_ctx = sws_getContext(this->display_width, this->display_height, this->format_in, this->display_width,
 		this->display_height, this->format_out, SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
 
-	if(init)
+	if (init)
 	{
 		first_frame = vf.Header.frame_number;
 		last_frame = first_frame;

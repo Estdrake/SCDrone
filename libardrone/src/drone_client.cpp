@@ -5,7 +5,8 @@ DroneClient::DroneClient() :
 	video_client(&vf_queue),
 	at_client(&at_queue),
 	nd_client(&nav_queue),
-	control(&at_queue)
+	control(&at_queue),
+	auto_control(&at_client)
 {
 }
 
@@ -14,7 +15,8 @@ DroneClient::DroneClient(bool lol) :
 	video_client(&video_staging),
 	at_client(&at_queue),
 	nd_client(&nav_queue),
-	control(&at_queue) {
+	control(&at_queue),
+	auto_control(&at_client) {
 	united_video_thread = lol;
 }
 
