@@ -21,7 +21,7 @@ extern "C" {
 namespace fs = std::filesystem;
 
 
-#define H264_INBUF_SIZE 50000 // Grosseur de mon buffer que j'utilise pour les trames que je recoit
+#define H264_INBUF_SIZE 100000 // Grosseur de mon buffer que j'utilise pour les trames que je recoit
 
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
 
@@ -39,6 +39,41 @@ struct video_staging_info
 	
 	bool				is_recording_raw;
 	const char*			file_name;
+
+};
+
+
+template<int Size>
+struct PacketBuffer {
+	uint8_t		buffer[Size];
+	int			max_length = Size;
+	int			index_parsing = 0;
+	int			index_end = 0;
+
+
+	// Retourne si j'ai de l'espace pour ajouter le nombre de byte passer
+	bool		validSpace(int data_got) {
+		return index_parsing+index_end + data_got + AV_INPUT_BUFFER_PADDING_SIZE <= max_length;
+	}
+
+	void		reset() {
+		printf("Reseting Packet buffer index_end %d \n", index_end);
+
+		index_end = 0;
+		index_parsing = 0;
+	}
+
+	void		setBegin(int index) {
+		index_parsing = index;
+	}
+
+	void		append(uint8_t* data, int size) {
+		memcpy(buffer + index_end, data, size);
+		index_end += size;
+	}
+
+
+
 
 };
 
@@ -70,10 +105,13 @@ class VideoStaging : public Runnable
 	AVFrame*					frame_output;				// Contient la dernière frame convertit dans le format pour l'envoyer a OpenCV
 	AVPacket*					packet;
 
-	uint8_t**					buffer_array;				// Contient la liste des buffers que nous avons reçu depuis le début
-	uint8_t*					buffer;						// Contient le buffer en attendant qu'on n'aille une frame complete
-	int							indice_buffer;				// Contient l'indice courrant dans le buffer
-	int							buffer_size;				// Contient la grosseur du buffer en ce moment
+	//uint8_t**					buffer_array;				// Contient la liste des buffers que nous avons reçu depuis le début
+	//uint8_t*					buffer;						// Contient le buffer en attendant qu'on n'aille une frame complete
+	//int							indice_buffer;				// Contient l'indice courrant dans le buffer
+	//int							buffer_size;				// Contient la grosseur du buffer en ce moment
+
+	PacketBuffer<H264_INBUF_SIZE> packet_buffer;			// Structure qui contient mon buffer que je remplit pou avoir une frame
+
 
 	int							line_size;
 

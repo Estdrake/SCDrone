@@ -49,7 +49,7 @@ link_directories(
 )
 
 
-#add_definitions(-DDEBUG_VIDEO_CLIENT)
+add_definitions(-DDEBUG_VIDEO_CLIENT)
 add_definitions(-DDEBUG_VIDEO_STAGING)
 
 #set(CMAKE_INCLUDE_CURRENT_DIR ON)
