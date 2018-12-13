@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------- - */
 /**
  * @file   ap_client.h
- * @brief  Définit la classe qui s'occupe de la gestion de l'envoi des commandes
+ * @brief  Dï¿½finit la classe qui s'occupe de la gestion de l'envoi des commandes
  *			at vers le drone
  *
  ******************************************************************************/
@@ -51,7 +51,6 @@ struct speed
 class ATClient : public QObject, public Runnable
 {
 	ATQueue* queue;
-	//ATQueue* config_queue;
 
 	QUdpSocket* socket;
 	QHostAddress* sender;
@@ -106,8 +105,6 @@ public:
 		}
 		
 	}
-
-
 
 
 public slots:
