@@ -25,6 +25,7 @@ protected:
 	ATClient			at_client;
 	NavDataClient		nd_client;
 	DroneControl		control;
+	AsyncControl		auto_control;
 private:
 	std::thread			vs_thread;
 	std::thread			vc_thread;

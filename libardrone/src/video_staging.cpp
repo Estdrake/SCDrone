@@ -28,6 +28,7 @@ VideoStaging::VideoStaging(MQueue* queue) : of(), Runnable() {
 #endif
 
 	const AVCodecID codec_id = AV_CODEC_ID_H264;
+	//const AVCodecID codec_id = AV_codec_id;
 	codec = avcodec_find_decoder(codec_id);
 	if (nullptr == codec)
 	{
@@ -36,10 +37,10 @@ VideoStaging::VideoStaging(MQueue* queue) : of(), Runnable() {
 
 	format_in = AV_PIX_FMT_YUV420P;
 	format_out = AV_PIX_FMT_BGR24;
-	bit_rate = 1000;
+	bit_rate = 4000;
 	display_width = 640;
 	display_height = 360;
-	fps = 14;
+	fps = 24;
 
 	codec_ctx = avcodec_alloc_context3(codec);
 	if (!codec_ctx)
@@ -80,7 +81,6 @@ VideoStaging::VideoStaging(MQueue* queue) : of(), Runnable() {
 	packet = av_packet_alloc();
 	frame_output = av_frame_alloc();
 	frame = av_frame_alloc();
-
 	buffer = new uint8_t[H264_INBUF_SIZE];
 	buffer_size = H264_INBUF_SIZE;
 	indice_buffer = 0;
@@ -269,6 +269,9 @@ bool VideoStaging::add_frame_buffer(const VideoFrame& vf)
 	else
 		packet->flags = 0;
 	int len = av_parser_parse2(codec_parser, codec_ctx, &packet->data, &packet->size, buffer, indice_buffer,AV_NOPTS_VALUE, vf.Header.timestamp, vf.Header.chunck_index);
+	
+	
+	//indice_buffer += vf.Got;
 	if(len < 0)
 	{
 		// erreur de parsing pas bon
@@ -278,6 +281,7 @@ bool VideoStaging::add_frame_buffer(const VideoFrame& vf)
 	{
 		if(avcodec_send_packet(codec_ctx, packet))
 		{
+			
 			int i = avcodec_receive_frame(codec_ctx, frame);
 			if(i == 0)
 			{
@@ -293,6 +297,7 @@ bool VideoStaging::add_frame_buffer(const VideoFrame& vf)
 	} 
 	
 	return false;
+	
 }
 
 void VideoStaging::init_or_frame_changed(const VideoFrame& vf,bool init)

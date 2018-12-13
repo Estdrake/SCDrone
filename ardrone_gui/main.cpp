@@ -154,7 +154,7 @@ private:
 	{
 		if(show_color_obj_tracking)
 		{
-			static float 	low_color[4] {0.0f,134.0f,91.0f};
+			static float 	low_color[4] {0.0f,185.0f,209.0f};
 			static float 	high_color[4] {12.0f,255.0f,255.0f};
 
 			static float	low_color2[4] {168.0f,134.0f,91.0f};
@@ -163,7 +163,7 @@ private:
 			static int		interval_time = 750;
 
 			static int 		size_obj[2]{ 20 , 20 };
-			static float	gap_size[2]{ 0.2f, 0.2f };
+			static float	gap_size[2]{ 0.3f, 0.3f };
 
 			static bool		external_interval = false;
 
@@ -234,16 +234,17 @@ private:
 				ImGui::Separator();
 				if (!enable_autopilot_xy) {
 					if (ImGui::Button("Suivre")) {
-						if (at_client.get_ref() == "FLYING")
+						//if (at_client.get_ref() == "FLYING")
 							enable_autopilot_xy = true;
-						else
-							AR_LOG_ERROR(0, "Le drone doit etre en vol pour le tracking\n");
+						//else
+						//	AR_LOG_ERROR(0, "Le drone doit etre en vol pour le tracking\n");
 					}
 				}
 				else {
 					if (ImGui::Button("Arreter Suivre")) {
 						at_client.hover();
 						enable_autopilot_xy = false;
+						auto_control.stopAutoPilot();
 					}
 					ImGui::SameLine();
 					ImGui::TextColored({ 255,255,0,1 }, "Centrer ? %s", (is_tracking_center) ? "OUI" : "NON");
@@ -607,7 +608,9 @@ private:
 						if (!obj_tracker.isInCenterGap(obj_info.position)) {
 							printf("Not center %f %f \n", obj_info.position[0], obj_info.position[1]);
 							is_tracking_center = false;
-							at_client.setVector2D(obj_info.position[0], obj_info.position[1]);
+							
+							//at_client.setVector2D(obj_info.position[0], obj_info.position[1]);
+							auto_control.setVector2DAsync(obj_info.position[0], obj_info.position[1]);
 						}
 						else {
 							printf("Object center\n");
